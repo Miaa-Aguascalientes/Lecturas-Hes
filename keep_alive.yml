@@ -3,15 +3,15 @@ name: Despierta Streamlit
 on:
   schedule:
     # Se ejecuta cada 4 horas (6 veces al día)
-    # 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC
     - cron: '0 */4 * * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch: # ESTA LÍNEA ES LA QUE ACTIVA EL BOTÓN MANUAL
 
 jobs:
-  ping:
+  ping_job:
+    name: Trabajo de Despertado
     runs-on: ubuntu-latest
     steps:
-      - name: Ping App Movil
+      - name: Enviando señal a la App
         run: |
           curl -I https://lecturas-hes.streamlit.app/
-          echo "Ping enviado a las $(date)"
+          echo "Ping enviado con éxito a las $(date)"
