@@ -1,16 +1,15 @@
 name: Despierta Streamlit
-
 on:
   schedule:
-    # Se ejecuta cada 4 horas (6 veces al día)
-    - cron: '0 */4 * * *'
-  workflow_dispatch: # ESTA LÍNEA ACTIVA EL BOTÓN PARA EJECUTAR MANUALMENTE
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Enviando señal a la App
-        run: |
-          curl -I https://lecturas-hes.streamlit.app/
-          echo "Ping enviado con éxito a las $(date)"
+      - name: Ping App Web
+        run: curl -I https://miaa-sincronizador-version-web.streamlit.app
+
+      - name: Ping App Movil
+        run: curl -I https://miaa-sincronizador-ver-app.streamlit.app
