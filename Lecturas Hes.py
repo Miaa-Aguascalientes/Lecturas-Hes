@@ -13,6 +13,17 @@ import time
 st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 st.markdown("<style>.stApp { background-color: #000000 !important; color: white; }</style>", unsafe_allow_html=True)
 
+# Estilo visual: Fondo negro y textos legibles
+st.markdown("""
+    <style>
+        .stApp { background-color: #000000 !important; color: white; }
+        section[data-testid="stSidebar"] { background-color: #111111 !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# URL RAW DE TU LOGO EN GITHUB
+URL_LOGO_MIAA = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/refs/heads/main/LOGO%20HES.png"
+
 @st.cache_resource
 def get_mysql_engine():
     """Establece conexión con MySQL usando SQLAlchemy y Secrets."""
@@ -92,12 +103,17 @@ def get_color_logic(nivel, consumo_mes):
 mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
+# 3. SIDEBAR Y FILTROS
 with st.sidebar:
-    st.image("https://photos.google.com/share/AF1QipMZnN6yXXCjY7vT0htoc42d0IBGw7g8rGmtP2qVayE0rsxjYNCpAhNWKmDSHiAong/photo/AF1QipMMH4b8iDaF205XUlge_3lZZw3ybUMHZcuwLS72?key=dHpCcUZNc29ES0ZLbi1sYldkeEJsMGg5Rjllb2FB", width=120)
+    # Mostramos el logo desde tu URL de GitHub
+    st.image(URL_LOGO_MIAA, use_container_width=True)
+    st.divider()
     
-    if st.button("♻️ Regenerar Aplicación", use_container_width=True):
-        reiniciar_tablero()
-        
+    if st.button("♻️ Actualizar Datos", use_container_width=True):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.rerun()
+    
     st.divider()
     
     # Manejo de fechas para evitar errores de carga
@@ -206,6 +222,7 @@ with col_der:
 # Botón inferior
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
