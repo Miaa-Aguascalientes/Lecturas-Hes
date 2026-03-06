@@ -22,7 +22,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # URL RAW DE TU LOGO EN GITHUB
-URL_LOGO_MIAA = "https://github.com/Miaa-Aguascalientes/Lecturas-Hes/blob/a3ac50c12227ecb3d20158787e686572401944e5/LOGO%20HES.png"
+URL_LOGO_MIAA = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/refs/heads/main/MIAA.png"
 
 @st.cache_resource
 def get_mysql_engine():
@@ -222,6 +222,7 @@ with col_der:
 # Botón inferior
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
