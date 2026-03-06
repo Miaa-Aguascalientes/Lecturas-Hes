@@ -12,20 +12,20 @@ import time
 # 1. CONFIGURACIÓN DE PÁGINA Y ESTILOS CSS
 st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 
-# Estilo para fondo negro y personalización de componentes
+# Aplicación de estilo visual: Fondo negro y personalización de la barra lateral
 st.markdown("""
     <style>
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
         
-        /* Asegura que el contenedor del multiselect ocupe el ancho total */
+        /* Asegura que el contenedor del multiselect ocupe el ancho total y sea legible */
         div[data-baseweb="select"] {
             width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# URL del logo en GitHub
+# URL del logo en GitHub (Raw)
 URL_LOGO_MIAA = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/refs/heads/main/LOGO%20HES.png"
 
 # --- CONEXIONES ---
@@ -36,7 +36,7 @@ def get_mysql_engine():
     try:
         creds = st.secrets["mysql"]
         user = creds["user"]
-        # quote_plus maneja caracteres especiales en la contraseña para evitar errores de conexión
+        # quote_plus es vital para manejar caracteres especiales en la contraseña
         pwd = urllib.parse.quote_plus(creds["password"])
         host = creds["host"]
         db = creds["database"]
@@ -58,7 +58,7 @@ def get_postgres_conn():
 
 @st.cache_data(ttl=3600)
 def get_sectores_cached():
-    """Carga polígonos de sectores desde Postgres."""
+    """Carga polígonos de sectores desde Postgres (PostGIS)."""
     conn = get_postgres_conn()
     if conn is None:
         return pd.DataFrame()
@@ -86,7 +86,7 @@ def reiniciar_tablero():
     st.rerun()
 
 def get_color_logic(nivel, consumo_mes):
-    """Lógica para determinar el color del marcador según el nivel y consumo."""
+    """Determina el color del marcador según el nivel y consumo detectado."""
     v = float(consumo_mes) if consumo_mes else 0
     colors = {
         "REGULAR": "#00FF00", "NORMAL": "#32CD32", "BAJO": "#FF8C00", 
@@ -115,7 +115,7 @@ df_sec = get_sectores_cached()
 
 # --- SIDEBAR Y FILTROS ---
 with st.sidebar:
-    # Logo de MIAA desde GitHub
+    # Logo de MIAA cargado directamente desde GitHub
     st.image(URL_LOGO_MIAA, use_container_width=True)
     st.divider()
     
@@ -124,14 +124,14 @@ with st.sidebar:
     
     st.divider()
     
-    # Rango de fechas
+    # Rango de fechas para la consulta
     try:
         fecha_rango = st.date_input("Periodo de consulta", value=(pd.Timestamp(2026, 2, 1), pd.Timestamp(2026, 2, 28)))
     except:
         st.stop()
     
     if len(fecha_rango) == 2:
-        # Carga de datos HES según el periodo
+        # Carga de datos HES basada en el motor MySQL verificado
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         
         # Configuración de filtros con títulos internos (Placeholders)
@@ -144,10 +144,10 @@ with st.sidebar:
             ("Sector", "Sector")
         ]
         
+        # Generación de multiselects sin etiquetas externas para diseño limpio
         for col_db, titulo in filtros_config:
             if col_db in df_hes.columns:
                 opciones = sorted(df_hes[col_db].unique().astype(str).tolist())
-                # Se oculta el label externo y se coloca el título dentro del recuadro
                 seleccion = st.multiselect(
                     label=titulo,
                     options=opciones,
@@ -165,14 +165,14 @@ with st.sidebar:
             for _, row in ranking.iterrows():
                 st.caption(f"{row['Medidor']}: {row['Consumo_diario']:,.1f} m3")
     else:
-        st.info("Seleccione un rango de fechas")
+        st.info("Seleccione un rango de fechas en el calendario.")
         st.stop()
 
 # --- DASHBOARD PRINCIPAL ---
 
 st.title("📊 Medidores Inteligentes - Tablero de Consumos")
 
-# Procesamiento de datos para el mapa
+# Agregación de datos para visualización en mapa
 mapeo_columnas = {
     'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first',
     'Nivel': 'first', 'Colonia': 'first', 'Sector': 'first'
@@ -180,24 +180,24 @@ mapeo_columnas = {
 agg_actual = {col: func for col, func in mapeo_columnas.items() if col in df_hes.columns}
 df_mapa = df_hes.groupby('Medidor').agg(agg_actual).reset_index()
 
-# Métricas rápidas
+# Métricas de resumen
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("N° de medidores", f"{len(df_mapa):,}")
 m2.metric("Consumo acumulado m3", f"{df_hes['Consumo_diario'].sum():,.1f}")
 m3.metric("Promedio diario m3", f"{df_hes['Consumo_diario'].mean():.2f}")
 m4.metric("Total lecturas", f"{len(df_hes):,}")
 
-# Layout de Mapa y Tabla
+# Layout del Mapa y Tabla de datos
 col_map, col_der = st.columns([3, 1.2])
 
 with col_map:
-    # Determinación del centro del mapa
+    # Centrado dinámico del mapa basado en coordenadas válidas
     df_coords = df_mapa[(df_mapa['Latitud'] != 0) & (df_mapa['Latitud'].notnull())]
     lat_centro, lon_centro = (df_coords['Latitud'].mean(), df_coords['Longitud'].mean()) if not df_coords.empty else (21.8853, -102.2916)
     
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=13, tiles="CartoDB dark_matter")
     
-    # Capa de sectores (Postgres)
+    # Renderizado de Sectores Hidrométricos (Postgres)
     if not df_sec.empty:
         for _, row in df_sec.iterrows():
             folium.GeoJson(
@@ -206,7 +206,7 @@ with col_map:
                 tooltip=f"Sector: {row['sector']}"
             ).add_to(m)
 
-    # Marcadores de medidores
+    # Marcadores circulares para medidores individuales
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, _ = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
@@ -222,5 +222,6 @@ with col_der:
     st.write("🟢 **Consumo en tiempo real**")
     st.dataframe(df_hes[['Fecha', 'Medidor', 'Consumo_diario']].tail(25), hide_index=True)
 
-if st.button("Reset"):
+# Botón inferior para reinicio rápido
+if st.button("Reset Sistema"):
     reiniciar_tablero()
