@@ -92,7 +92,7 @@ mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
 with st.sidebar:
-    st.image("https://photos.google.com/share/AF1QipPmCTiG-M7isM3fF2GBdSFnjkBkOAh5TGVpNToUB1iCuwmw9MWzN3dJWwpzY80Njw?key=VG5ITUR5WjV3Z2Y4a2t6YVh4Zno1OFdoWlUzazdB", width=120)
+    st.image("https://photos.google.com/share/AF1QipMZnN6yXXCjY7vT0htoc42d0IBGw7g8rGmtP2qVayE0rsxjYNCpAhNWKmDSHiAong/photo/AF1QipMMH4b8iDaF205XUlge_3lZZw3ybUMHZcuwLS72?key=dHpCcUZNc29ES0ZLbi1sYldkeEJsMGg5Rjllb2FB", width=120)
     
     if st.button("♻️ Regenerar Aplicación", use_container_width=True):
         reiniciar_tablero()
@@ -123,7 +123,7 @@ with st.sidebar:
         st.divider()
         
         # --- RANKING TOP CONSUMO ---
-        st.write("**Ranking Top 10 Consumo**")
+        st.write("**Ranking Top 20 Consumo**")
         if not df_hes.empty:
             ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
             max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
@@ -205,6 +205,7 @@ with col_der:
 # Botón inferior
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
