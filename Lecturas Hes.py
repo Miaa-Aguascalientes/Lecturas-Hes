@@ -100,11 +100,9 @@ def get_color_logic(nivel, consumo_mes):
 mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
-# --- LÓGICA DE FECHAS DINÁMICAS ---
+# --- LÓGICA DE FECHAS EN ESPAÑOL ---
 ahora = pd.Timestamp.now()
-inicio_mes = ahora.replace(day=1)
-# Por defecto: del día 1 al día de hoy del mes en curso
-default_range = (inicio_mes, ahora)
+inicio_mes_actual = ahora.replace(day=1)
 
 with st.sidebar:
     st.image(URL_LOGO_MIAA, use_container_width=True)
@@ -116,12 +114,34 @@ with st.sidebar:
         st.rerun()
     
     st.divider()
-    
-    # Calendario amigable: Selección de rango con formato DD/MM/YYYY
+
+    # Selección de rango rápido (Traducción de tu imagen)
+    st.write("**📅 Selecciona un rango**")
+    opcion_rango = st.selectbox(
+        "Rango predefinido",
+        ["Este mes", "Semana pasada", "Últimos 3 meses", "Últimos 6 meses", "Último año", "Personalizado"],
+        index=0, # Inicia en "Este mes"
+        label_visibility="collapsed"
+    )
+
+    # Lógica para determinar el rango de fechas
+    if opcion_rango == "Este mes":
+        default_range = (inicio_mes_actual, ahora)
+    elif opcion_rango == "Semana pasada":
+        default_range = (ahora - pd.Timedelta(days=7), ahora)
+    elif opcion_rango == "Últimos 3 meses":
+        default_range = (ahora - pd.DateOffset(months=3), ahora)
+    elif opcion_rango == "Últimos 6 meses":
+        default_range = (ahora - pd.DateOffset(months=6), ahora)
+    elif opcion_rango == "Último año":
+        default_range = (ahora - pd.DateOffset(years=1), ahora)
+    else:
+        default_range = (pd.Timestamp(2026, 1, 1), ahora)
+
+    # Calendario con formato local
     try:
-        st.write("**📅 Periodo de consulta**")
         fecha_rango = st.date_input(
-            "", # Etiqueta oculta para mayor limpieza
+            "Periodo de consulta",
             value=default_range,
             max_value=ahora,
             format="DD/MM/YYYY",
@@ -133,17 +153,16 @@ with st.sidebar:
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         
+        # Filtros compactos (manteniendo tu estilo de columnas)
+        st.markdown("<br>", unsafe_allow_html=True)
         filtros_sidebar = ["ClientID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
         filtros_activos = {}
         
-        # FILTROS COMPACTOS HORIZONTALES
-        st.markdown("<br>", unsafe_allow_html=True)
         for col in filtros_sidebar:
             if col in df_hes.columns:
                 opciones = sorted(df_hes[col].unique().astype(str).tolist())
                 c1, c2 = st.columns([1, 2])
                 with c1:
-                    # Margen ajustado para alineación vertical con el multiselect
                     st.markdown(f"<p style='margin-top:10px; font-size: 14px;'>{col}</p>", unsafe_allow_html=True)
                 with c2:
                     seleccion = st.multiselect("", options=opciones, key=f"f_{col}", label_visibility="collapsed")
@@ -236,4 +255,5 @@ with col_der:
 
 if st.button("Reset"):
     reiniciar_tablero()
+
 
