@@ -259,13 +259,35 @@ with col_map:
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
             ).add_to(m)
 
-    for _, r in df_mapa.iterrows():
+for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
-            pop_html = f"<div style='font-family: Arial; font-size: 11px; width: 300px; color: #333;'><b>Medidor:</b> {r['Medidor']}<br><b>Consumo:</b> {r['Consumo_diario']:.2f} m3</div>"
+            
+            # POPUP CON INFORMACIÓN COMPLETA (Estilo imagen de referencia)
+            pop_html = f"""
+            <div style='font-family: Arial; font-size: 12px; width: 320px; color: #333; line-height: 1.5;'>
+                <h5 style='margin:0 0 5px 0; color: #007bff;'>Detalle del Medidor</h5>
+                <b>Cliente:</b> {r.get('ClientID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
+                <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
+                <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
+                <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
+                <b>Tarifa:</b> {r.get('Nivel', 'N/A')}<br>
+                <b>Giro:</b> {r.get('Giro', 'N/A')}<br>
+                <b>Dirección:</b> {r.get('Domicilio', 'N/A')} - <b>Colonia:</b> {r.get('Colonia', 'N/A')}<br>
+                <b>Sector:</b> {r.get('Sector', 'N/A')} - <b>Nivel:</b> {r.get('Nivel', 'N/A')}<br>
+                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
+                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
+                <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
+                <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
+            </div>
+            """
+            
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']],
-                radius=3, color=color_hex, fill=True, fill_opacity=0.9,
+                radius=4, # Un poco más grande para facilitar el clic
+                color=color_hex, 
+                fill=True, 
+                fill_opacity=0.9,
                 popup=folium.Popup(pop_html, max_width=350)
             ).add_to(m)
     
@@ -277,6 +299,7 @@ with col_der:
 
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
