@@ -196,9 +196,9 @@ with st.sidebar:
         st.divider()
         
         # --- RANKING TOP CONSUMO (ESTILO ORIGINAL) ---
-        st.write("**Ranking Top 20 Consumo**")
+        st.write("**Ranking Top 10 Consumo**")
         if not df_hes.empty:
-            ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(20).reset_index()
+            ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
             max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
             
             for _, row in ranking_data.iterrows():
@@ -277,6 +277,7 @@ with col_der:
 
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
