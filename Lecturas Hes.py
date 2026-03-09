@@ -100,6 +100,12 @@ def get_color_logic(nivel, consumo_mes):
 mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
+# --- LÓGICA DE FECHAS DINÁMICAS ---
+ahora = pd.Timestamp.now()
+inicio_mes = ahora.replace(day=1)
+# Por defecto: del día 1 al día de hoy del mes en curso
+default_range = (inicio_mes, ahora)
+
 with st.sidebar:
     st.image(URL_LOGO_MIAA, use_container_width=True)
     st.divider()
@@ -111,8 +117,16 @@ with st.sidebar:
     
     st.divider()
     
+    # Calendario amigable: Selección de rango con formato DD/MM/YYYY
     try:
-        fecha_rango = st.date_input("Periodo de consulta", value=(pd.Timestamp(2026, 2, 1), pd.Timestamp(2026, 2, 28)))
+        st.write("**📅 Periodo de consulta**")
+        fecha_rango = st.date_input(
+            "", # Etiqueta oculta para mayor limpieza
+            value=default_range,
+            max_value=ahora,
+            format="DD/MM/YYYY",
+            label_visibility="collapsed"
+        )
     except:
         st.stop()
     
@@ -123,13 +137,14 @@ with st.sidebar:
         filtros_activos = {}
         
         # FILTROS COMPACTOS HORIZONTALES
+        st.markdown("<br>", unsafe_allow_html=True)
         for col in filtros_sidebar:
             if col in df_hes.columns:
                 opciones = sorted(df_hes[col].unique().astype(str).tolist())
                 c1, c2 = st.columns([1, 2])
                 with c1:
-                    # Ajuste de margen para centrar el texto con la caja
-                    st.markdown(f"<p style='margin-top:28px;'>{col}</p>", unsafe_allow_html=True)
+                    # Margen ajustado para alineación vertical con el multiselect
+                    st.markdown(f"<p style='margin-top:10px; font-size: 14px;'>{col}</p>", unsafe_allow_html=True)
                 with c2:
                     seleccion = st.multiselect("", options=opciones, key=f"f_{col}", label_visibility="collapsed")
                 
@@ -221,3 +236,4 @@ with col_der:
 
 if st.button("Reset"):
     reiniciar_tablero()
+
