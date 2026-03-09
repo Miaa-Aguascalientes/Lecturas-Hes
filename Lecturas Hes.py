@@ -259,7 +259,7 @@ with col_map:
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
             ).add_to(m)
 
-for _, r in df_mapa.iterrows():
+        for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
@@ -299,6 +299,7 @@ with col_der:
 
 if st.button("Reset"):
     reiniciar_tablero()
+
 
 
 
