@@ -226,7 +226,7 @@ mapeo_columnas = {
     'Latitud': 'first', 
     'Longitud': 'first',
     'Nivel': 'first', 
-    'ClientID_API': 'first', # Aquí tomamos el primer ID encontrado
+    'ClientID_API': 'first', # Mantiene el ID del cliente tras el agrupamiento
     'Nombre': 'first', 
     'Predio': 'first',
     'Domicilio': 'first', 
@@ -282,11 +282,16 @@ with col_map:
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
+            # --- CORRECCIÓN PARA EL NÚMERO DE CLIENTE ---
+            # Forzamos a que si el dato existe en el DataFrame, se convierta en texto y no se pierda
+            val_cliente = r.get('ClientID_API')
+            txt_cliente = str(int(float(val_cliente))) if pd.notnull(val_cliente) and str(val_cliente).strip() != "" else "N/A"
+            
             # Construcción del Popup con estilo profesional
             pop_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #333; line-height: 1.4;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
-                <b>Cliente:</b> {r.get('ClientID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
+                <b>Cliente:</b> {txt_cliente} - <b>Serie:</b> {r['Medidor']}<br>
                 <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
                 <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
                 <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
@@ -318,7 +323,6 @@ with col_map:
 
 with col_der:
     st.write("🟢 **Histórico Reciente**")
-    # Mostramos las últimas 15 lecturas filtradas
     if not df_hes.empty:
         st.dataframe(
             df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), 
@@ -328,12 +332,8 @@ with col_der:
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
 
-# Botón de reinicio al final
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
-
-
-
 
 
 
