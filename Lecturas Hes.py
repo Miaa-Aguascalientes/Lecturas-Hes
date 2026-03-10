@@ -221,10 +221,21 @@ with st.sidebar:
 
 # --- PROCESAMIENTO ---
 mapeo_columnas = {
-    'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first',
-    'Nivel': 'first', 'ClientID_API': 'first', 'Nombre': 'first', 'Predio': 'first',
-    'Domicilio': 'first', 'Colonia': 'first', 'Giro': 'first', 'Sector': 'first',
-    'Metodoid_API': 'first', 'Primer_instalacion': 'first', 'Fecha': 'last'
+    'Consumo_diario': 'sum', 
+    'Lectura': 'last', 
+    'Latitud': 'first', 
+    'Longitud': 'first',
+    'Nivel': 'first', 
+    'ClientID_API': 'first', # Aquí tomamos el primer ID encontrado
+    'Nombre': 'first', 
+    'Predio': 'first',
+    'Domicilio': 'first', 
+    'Colonia': 'first', 
+    'Giro': 'first', 
+    'Sector': 'first',
+    'Metodoid_API': 'first', 
+    'Primer_instalacion': 'first', 
+    'Fecha': 'last'
 }
 
 # Filtramos solo las columnas que realmente existen en el DataFrame actual
@@ -320,6 +331,7 @@ with col_der:
 # Botón de reinicio al final
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
