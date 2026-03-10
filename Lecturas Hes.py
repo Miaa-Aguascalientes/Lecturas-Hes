@@ -306,7 +306,7 @@ with col_map:
             
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']],
-                radius=4, 
+                radius=2, 
                 color=color_hex, 
                 fill=True, 
                 fill_opacity=0.9,
@@ -331,6 +331,7 @@ with col_der:
 # Botón de reinicio al final
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
