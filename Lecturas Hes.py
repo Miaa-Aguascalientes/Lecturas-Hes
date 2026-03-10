@@ -219,19 +219,19 @@ with st.sidebar:
     else:
         st.stop()
 
-# --- PROCESAMIENTO CORREGIDO (FORZANDO DATOS DE CLIENTE) ---
-# 1. Aseguramos que la columna sea numérica y quitamos espacios
+# --- PROCESAMIENTO ---
+# 1. Limpieza inicial: Aseguramos que ClientID_API sea numérico para evitar errores de formato
 if 'ClientID_API' in df_hes.columns:
     df_hes['ClientID_API'] = pd.to_numeric(df_hes['ClientID_API'], errors='coerce')
 
-# 2. Mapeo optimizado: Para el cliente usamos 'max' o una lambda para evitar el N/A si hay datos
+# 2. Mapeo optimizado: Usamos una función lambda para ClientID_API para ignorar nulos y obtener el valor real
 mapeo_columnas = {
     'Consumo_diario': 'sum', 
     'Lectura': 'last', 
     'Latitud': 'first', 
     'Longitud': 'first',
     'Nivel': 'first', 
-    'ClientID_API': lambda x: x.dropna().iloc[0] if not x.dropna().empty else "N/A", # Busca el primer valor real no nulo
+    'ClientID_API': lambda x: x.dropna().iloc[0] if not x.dropna().empty else "N/A", 
     'Nombre': 'first', 
     'Predio': 'first',
     'Domicilio': 'first', 
@@ -243,37 +243,73 @@ mapeo_columnas = {
     'Fecha': 'last'
 }
 
+# Filtramos solo las columnas que realmente existen en el DataFrame actual
 agg_segura = {col: func for col, func in mapeo_columnas.items() if col in df_hes.columns}
 df_mapa = df_hes.groupby('Medidor').agg(agg_segura).reset_index()
 
-# ... (Métricas y lógica de zoom se mantienen igual) ...
+# LÓGICA DE ZOOM DINÁMICO
+df_valid_coords = df_mapa[(df_mapa['Latitud'] != 0) & (df_mapa['Longitud'] != 0) & (df_mapa['Latitud'].notnull())]
+if not df_valid_coords.empty and (filtros_activos.get("Colonia") or filtros_activos.get("Sector")):
+    lat_centro, lon_centro, zoom_inicial = df_valid_coords['Latitud'].mean(), df_valid_coords['Longitud'].mean(), 14
+else:
+    lat_centro, lon_centro, zoom_inicial = 21.8853, -102.2916, 12
+
+# 5. DASHBOARD - VISUALIZACIÓN
+st.title("Medidores inteligentes - Tablero de consumos")
+
+# Métricas principales
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("N° de medidores", f"{len(df_mapa):,}")
+m2.metric("Consumo acumulado m3", f"{df_hes['Consumo_diario'].sum():,.1f}" if 'Consumo_diario' in df_hes.columns else "0")
+m3.metric("Promedio diario m3", f"{df_hes['Consumo_diario'].mean():.2f}" if 'Consumo_diario' in df_hes.columns else "0")
+m4.metric("Lecturas", f"{len(df_hes):,}")
+
+col_map, col_der = st.columns([3, 1.2])
 
 with col_map:
+    # Creación del mapa base
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
     
-    # (Tu lógica de GeoJson se mantiene aquí)
+    # Capa de Sectores Hidrométricos (GeoJSON)
+    if not df_sec.empty:
+        for _, row in df_sec.iterrows():
+            geojson_obj = json.loads(row['geojson_data'])
+            folium.GeoJson(
+                geojson_obj,
+                style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1},
+                highlight_function=lambda x: {'fillColor': '#ffff00', 'color': '#ffff00', 'weight': 3, 'fillOpacity': 0.4},
+                tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
+            ).add_to(m)
 
-    # Marcadores con Popup corregido
+    # Capa de Marcadores de Medidores con Popup Detallado
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Limpieza final del ID de cliente para el popup
-            cli_id = r.get('ClientID_API', 'N/A')
-            if pd.notnull(cli_id) and cli_id != "N/A":
-                txt_cliente = f"{int(float(cli_id))}" # Lo dejamos como entero limpio
-            else:
-                txt_cliente = "Sin registro"
+            # Formateo limpio del ID de Cliente (quitando el .0 de los floats)
+            cli_id_raw = r.get('ClientID_API', 'N/A')
+            try:
+                txt_cliente = f"{int(float(cli_id_raw))}" if pd.notnull(cli_id_raw) and cli_id_raw != "N/A" else "N/A"
+            except:
+                txt_cliente = str(cli_id_raw)
 
+            # Construcción del Popup con estilo profesional
             pop_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #333; line-height: 1.4;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
                 <b>Cliente:</b> {txt_cliente} - <b>Serie:</b> {r['Medidor']}<br>
+                <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
+                <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
                 <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
                 <b>Tarifa:</b> {r.get('Nivel', 'N/A')}<br>
+                <b>Giro:</b> {r.get('Giro', 'N/A')}<br>
+                <b>Dirección:</b> {r.get('Domicilio', 'N/A')}<br>
+                <b>Colonia:</b> {r.get('Colonia', 'N/A')}<br>
+                <b>Sector:</b> {r.get('Sector', 'N/A')}<br>
                 <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
                 <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
-                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex}; margin-top:10px;'>
+                <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
+                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex};'>
                     <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
                 </div>
             </div>
@@ -281,15 +317,20 @@ with col_map:
             
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']],
-                radius=2, color=color_hex, fill=True, fill_opacity=0.9,
+                radius=4, 
+                color=color_hex, 
+                fill=True, 
+                fill_opacity=0.9,
                 popup=folium.Popup(pop_html, max_width=350)
             ).add_to(m)
     
+    # Renderizar mapa
     folium_static(m, width=900, height=550)
 
 with col_der:
-    st.write("🟢 **Histórico Reciente**")
+    st.write("🟢 **Consumo real**")
     if not df_hes.empty:
+        # Ordenamos por fecha para mostrar lo más reciente arriba
         st.dataframe(
             df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), 
             hide_index=True,
@@ -298,15 +339,9 @@ with col_der:
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
 
+# Botón de reinicio al final
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
-
-
-
-
-
-
-
 
 
 
