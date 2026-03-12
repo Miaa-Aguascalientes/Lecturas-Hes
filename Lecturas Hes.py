@@ -37,7 +37,7 @@ st.markdown("""
         }
         /* Desplaza la imagen (logo) hacia arriba */
         [data-testid="stSidebarUserContent"] img {
-            margin-top: -1000px !important; /* Ajusta este valor para subirlo más o menos */
+            margin-top: -100px !important; /* Ajusta este valor para subirlo más o menos */
         }
 
         /* 3. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR PRINCIPAL (INDICADORES) */
@@ -297,6 +297,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
