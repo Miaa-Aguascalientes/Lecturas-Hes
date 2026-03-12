@@ -20,23 +20,33 @@ st.markdown("""
         .titulo-superior {
             position: fixed;
             top: 20px; 
-            left: 500px; /* <--- Ajusta este valor para separarlo del borde izquierdo */
-            transform: none; /* <--- Cambia esto a 'none' para quitar el centrado */
+            left: 500px; 
+            transform: none; 
             z-index: 9999999;
             color: white;
-            font-size: 1.1rem; /* Un poco más pequeño suele verse mejor alineado a la izquierda */
+            font-size: 1.1rem;
             font-weight: bold;
             line-height: normal;
             pointer-events: none;
         }
 
-        /* 2. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR */
+        /* 2. SUBIR EL LOGOTIPO DEL SIDEBAR */
+        /* Elimina el espacio superior del contenedor del sidebar */
+        [data-testid="stSidebarUserContent"] {
+            padding-top: 0rem !important;
+        }
+        /* Desplaza la imagen (logo) hacia arriba */
+        [data-testid="stSidebarUserContent"] img {
+            margin-top: -10px !important; /* Ajusta este valor para subirlo más o menos */
+        }
+
+        /* 3. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR PRINCIPAL (INDICADORES) */
         .block-container {
-            padding-top: 1.8rem !important; <--- Cambia esto para bajar o subir los indicacores de la barra negra */
+            padding-top: 1.8rem !important;
             padding-bottom: 0rem !important;
         }
 
-        /* 3. ESTILOS GENERALES Y SIDEBAR (TUS ESTILOS ORIGINALES) */
+        /* 4. ESTILOS GENERALES Y SIDEBAR */
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
         
@@ -287,6 +297,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
