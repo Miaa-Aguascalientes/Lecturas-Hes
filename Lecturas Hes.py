@@ -20,7 +20,7 @@ st.markdown("""
         .titulo-superior {
             position: fixed;
             top: 20px; 
-            left: 100px; /* <--- Ajusta este valor para separarlo del borde izquierdo */
+            left: 500px; /* <--- Ajusta este valor para separarlo del borde izquierdo */
             transform: none; /* <--- Cambia esto a 'none' para quitar el centrado */
             z-index: 9999999;
             color: white;
@@ -287,6 +287,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
