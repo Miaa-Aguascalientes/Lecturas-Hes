@@ -19,7 +19,7 @@ st.markdown("""
         /* 1. POSICIONAR EL TÍTULO EN LA BARRA SUPERIOR */
         .titulo-superior {
             position: fixed;
-            top: 0;
+            top: 0.1;
             left: 50%;
             transform: translateX(-50%);
             z-index: 999999;
@@ -287,6 +287,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
