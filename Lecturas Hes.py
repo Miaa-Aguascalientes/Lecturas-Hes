@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import folium_static
-from folium.plugins import Fullscreen  # <--- Nueva importación
+from folium.plugins import Fullscreen
 from sqlalchemy import create_engine
 import psycopg2
 import json
@@ -19,27 +19,23 @@ st.markdown("""
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
         
-        /* 1. Reducir espacio entre bloques verticales en el sidebar */
         [data-testid="stSidebarUserContent"] div[data-testid="stVerticalBlock"] > div {
             padding-bottom: 0px !important;
             padding-top: 0px !important;
             margin-bottom: -5px !important;
         }
 
-        /* 2. Ajustar alineación de la etiqueta del filtro */
         [data-testid="stWidgetLabel"] p {
             font-size: 14px !important;
             margin-bottom: 0px !important;
         }
 
-        /* 3. Quitar márgenes excedentes de los selectores */
         .stMultiSelect {
             margin-bottom: 0px !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# URL RAW DE TU LOGO EN GITHUB
 URL_LOGO_MIAA = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Lecturas-Hes/refs/heads/main/LOGO%20HES.png"
 
 @st.cache_resource
@@ -101,15 +97,10 @@ def get_color_logic(nivel, consumo_mes):
 mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
-# --- LÓGICA DE FECHAS EN ESPAÑOL ---
 ahora = pd.Timestamp.now()
 inicio_mes_actual = ahora.replace(day=1)
-
-# Cálculos de Mes Pasado
 ultimo_dia_mes_pasado = inicio_mes_actual - pd.Timedelta(days=1)
 inicio_mes_pasado = ultimo_dia_mes_pasado.replace(day=1)
-
-# Cálculos de Años
 inicio_año_actual = ahora.replace(month=1, day=1)
 inicio_año_pasado = inicio_año_actual - pd.DateOffset(years=1)
 fin_año_pasado = inicio_año_actual - pd.Timedelta(days=1)
@@ -128,15 +119,7 @@ with st.sidebar:
     st.write("**📅 Selecciona un rango**")
     opcion_rango = st.selectbox(
         "Rango predefinido",
-        [
-            "Este mes", 
-            "Última semana",
-            "Mes pasado", 
-            "Últimos 6 meses",
-            "Este año", 
-            "Año pasado", 
-            "Personalizado"
-        ],
+        ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"],
         index=0,
         label_visibility="collapsed"
     )
@@ -214,21 +197,10 @@ with st.sidebar:
 
 # --- PROCESAMIENTO ---
 mapeo_columnas = {
-    'Consumo_diario': 'sum', 
-    'Lectura': 'last', 
-    'Latitud': 'first', 
-    'Longitud': 'first',
-    'Nivel': 'first', 
-    'ClienteID_API': 'first', 
-    'Nombre': 'first', 
-    'Predio': 'first',
-    'Domicilio': 'first', 
-    'Colonia': 'first', 
-    'Giro': 'first', 
-    'Sector': 'first',
-    'Metodoid_API': 'first', 
-    'Primer_instalacion': 'first', 
-    'Fecha': 'last'
+    'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first',
+    'Nivel': 'first', 'ClienteID_API': 'first', 'Nombre': 'first', 'Predio': 'first',
+    'Domicilio': 'first', 'Colonia': 'first', 'Giro': 'first', 'Sector': 'first',
+    'Metodoid_API': 'first', 'Primer_instalacion': 'first', 'Fecha': 'last'
 }
 
 agg_segura = {col: func for col, func in mapeo_columnas.items() if col in df_hes.columns}
@@ -253,18 +225,27 @@ m4.metric("Lecturas", f"{len(df_hes):,}")
 col_map, col_der = st.columns([3, 1.2])
 
 with col_map:
-    # Creación del mapa base
-    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
+    # --- CONFIGURACIÓN DE MAPA CON MÚLTIPLES CAPAS ---
+    # Creamos el mapa sin la capa base inicial para poder controlarlas todas
+    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles=None)
     
-    # --- BOTÓN PANTALLA COMPLETA ---
-    Fullscreen(
-        position="topright",
-        title="Ver en pantalla completa",
-        title_cancel="Salir de pantalla completa",
-        force_separate_button=True,
+    # Capas Base (Tiles)
+    folium.TileLayer('CartoDB dark_matter', name="Mapa Negro (Oscuro)", control=True).add_to(m)
+    folium.TileLayer('OpenStreetMap', name="Mapa Estándar (Color)", control=True).add_to(m)
+    folium.TileLayer('CartoDB positron', name="Mapa Claro (Gris)", control=True).add_to(m)
+    folium.TileLayer(
+        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr='Esri',
+        name='Satélite (Realista)',
+        control=True
     ).add_to(m)
+
+    # Plugin Pantalla Completa
+    Fullscreen(position="topright").add_to(m)
     
+    # Capa de Sectores
     if not df_sec.empty:
+        sectores_layer = folium.FeatureGroup(name="Sectores Hidrométricos")
         for _, row in df_sec.iterrows():
             geojson_obj = json.loads(row['geojson_data'])
             folium.GeoJson(
@@ -272,41 +253,35 @@ with col_map:
                 style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1},
                 highlight_function=lambda x: {'fillColor': '#ffff00', 'color': '#ffff00', 'weight': 3, 'fillOpacity': 0.4},
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
-            ).add_to(m)
+            ).add_to(sectores_layer)
+        sectores_layer.add_to(m)
 
+    # Capa de Marcadores
+    marcadores_layer = folium.FeatureGroup(name="Medidores")
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
-            
             pop_html = f"""
-            <div style='font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #333; line-height: 1.4;'>
-                <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
-                <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
-                <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
-                <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
+            <div style='font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #333;'>
+                <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc;'>Detalle del Medidor</h5>
+                <b>Serie:</b> {r['Medidor']}<br>
                 <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
-                <b>Tarifa:</b> {r.get('Nivel', 'N/A')}<br>
-                <b>Giro:</b> {r.get('Giro', 'N/A')}<br>
-                <b>Dirección:</b> {r.get('Domicilio', 'N/A')}<br>
-                <b>Colonia:</b> {r.get('Colonia', 'N/A')}<br>
-                <b>Sector:</b> {r.get('Sector', 'N/A')}<br>
-                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
-                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
-                <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
-                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex};'>
-                    <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
+                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3)<br>
+                <div style='text-align: center; margin-top:5px; padding: 5px; background-color: {color_hex}22; border: 1px solid {color_hex};'>
+                    <b style='color: {color_hex};'>{etiqueta}</b>
                 </div>
             </div>
             """
-            
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']],
-                radius=2, 
-                color=color_hex, 
-                fill=True, 
-                fill_opacity=0.9,
+                radius=3, color=color_hex, fill=True, fill_opacity=0.9,
                 popup=folium.Popup(pop_html, max_width=350)
-            ).add_to(m)
+            ).add_to(marcadores_layer)
+    marcadores_layer.add_to(m)
+
+    # --- CONTROL DE CAPAS ---
+    # Esto añade el selector flotante en el mapa
+    folium.LayerControl(position='topright', collapsed=True).add_to(m)
     
     folium_static(m, width=900, height=550)
 
@@ -315,8 +290,7 @@ with col_der:
     if not df_hes.empty:
         st.dataframe(
             df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), 
-            hide_index=True,
-            use_container_width=True
+            hide_index=True, use_container_width=True
         )
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
