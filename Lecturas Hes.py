@@ -16,17 +16,17 @@ st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 # ESTILO CSS
 st.markdown("""
     <style>
-        /* Eliminar el espacio superior del contenedor principal */
+        /* Ajuste del contenedor principal */
         .block-container {
-            padding-top: 1rem !important;
+            padding-top: 1.5rem !important; /* Espacio mínimo para que sea visible */
             padding-bottom: 0rem !important;
-            margin-top: 0px !important;
         }
         
-        /* Eliminar el margen superior del título h1 */
+        /* Ajuste del título */
         h1 {
-            margin-top: -30px !important;
+            margin-top: -15px !important; /* Margen negativo moderado */
             padding-top: 0px !important;
+            font-size: 2.2rem !important; /* Opcional: reduce un poco el tamaño para ganar espacio */
         }
 
         .stApp { background-color: #000000 !important; color: white; }
@@ -278,5 +278,6 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
