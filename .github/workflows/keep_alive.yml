@@ -3,7 +3,7 @@ name: Despierta Streamlit
 on:
   schedule:
     # Se ejecuta cada hora en el minuto 5
-    - cron: '5 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Permite ejecución manual
 
 jobs:
