@@ -256,7 +256,6 @@ with col_map:
     # Creación del mapa base
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
     
-    # --- BOTÓN PANTALLA COMPLETA ---
     Fullscreen(
         position="topright",
         title="Ver en pantalla completa",
@@ -278,9 +277,9 @@ with col_map:
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Contenido HTML para el Tooltip
+            # Ajuste dinámico: eliminamos 'width' y usamos 'white-space: nowrap'
             tooltip_html = f"""
-            <div style='font-family: Arial, sans-serif; font-size: 12px; width: 280px; color: #333; line-height: 1.4; padding: 5px;'>
+            <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
                 <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
                 <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
@@ -294,7 +293,7 @@ with col_map:
                 <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
                 <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
                 <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
-                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex};'>
+                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex}; white-space: normal;'>
                     <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
                 </div>
             </div>
@@ -302,11 +301,11 @@ with col_map:
             
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']],
-                radius=4, # Aumenté ligeramente el radio para facilitar el hover
+                radius=4, 
                 color=color_hex, 
                 fill=True, 
                 fill_opacity=0.9,
-                tooltip=folium.Tooltip(tooltip_html, sticky=True) # SE CAMBIÓ POPUP POR TOOLTIP
+                tooltip=folium.Tooltip(tooltip_html, sticky=True)
             ).add_to(m)
     
     folium_static(m, width=900, height=550)
