@@ -16,18 +16,18 @@ st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 # ESTILO CSS
 st.markdown("""
     <style>
-        /* 1. POSICIONAR EL TÍTULO EN LA BARRA SUPERIOR */
+        /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR */
         .titulo-superior {
             position: fixed;
-            top: 0.1;
-            left: 50%;
+            top: 8px; /* <--- Cambia 0px por 5px, 8px o 10px para bajarlo */
+            left: 55%; 
             transform: translateX(-50%);
-            z-index: 999999;
+            z-index: 9999999;
             color: white;
-            font-size: 18px; /* Ajustado para que quepa bien en la barra */
+            font-size: 1.2rem;
             font-weight: bold;
-            line-height: 45px; /* Altura promedio de la barra de Streamlit */
-            white-space: nowrap;
+            line-height: normal; /* Cambiamos esto a normal para que el 'top' mande */
+            pointer-events: none;
         }
 
         /* 2. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR */
@@ -287,6 +287,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
