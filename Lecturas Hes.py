@@ -18,7 +18,7 @@ st.markdown("""
     <style>
         /* Ajuste del contenedor principal */
         .block-container {
-            padding-top: 2.5rem !important; /* Espacio mínimo para que sea visible */
+            padding-top: 3.5rem !important; /* Espacio mínimo para que sea visible */
             padding-bottom: 0rem !important;
         }
         
@@ -278,6 +278,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
