@@ -161,14 +161,16 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_map, col_der = st.columns([3, 1.2])
 
 with col_map:
-    # CAPA NEGRA DEFAULT + SELECCIÓN DE CAPAS
-    m = folium.Map(location=[21.8853, -102.2916], zoom_start=12, tiles=None)
-    folium.TileLayer('CartoDB dark_matter', name="Mapa Negro (Oscuro)", control=True).add_to(m)
-    folium.TileLayer('OpenStreetMap', name="Mapa Estándar (Color)", control=True).add_to(m)
-    folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-                     attr='Esri', name='Satélite (Realista)', control=True).add_to(m)
+    # Creación del mapa base
+    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
     
-    Fullscreen(position="topright").add_to(m)
+    # --- BOTÓN PANTALLA COMPLETA ---
+    Fullscreen(
+        position="topright",
+        title="Ver en pantalla completa",
+        title_cancel="Salir de pantalla completa",
+        force_separate_button=True,
+    ).add_to(m)
 
     if not df_sec.empty:
         sectores_layer = folium.FeatureGroup(name="Sectores Hidrométricos", control=True)
@@ -237,3 +239,4 @@ with col_der:
 
 if st.button("🔄 Reiniciar", use_container_width=True):
     st.rerun()
+
