@@ -32,7 +32,7 @@ st.markdown("""
 
         /* 2. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR */
         .block-container {
-            padding-top: 1.5rem !important; /* Aumentamos el margen superior */
+            padding-top: 1.8rem !important; /* Aumentamos el margen superior */
             padding-bottom: 0rem !important;
         }
 
@@ -287,6 +287,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
