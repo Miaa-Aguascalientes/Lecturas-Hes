@@ -222,8 +222,18 @@ with col_map:
             <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
                 <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
-                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3)<br>
-                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex}; white-space: normal; margin-top:5px;'>
+                <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
+                <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
+                <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
+                <b>Tarifa:</b> {r.get('Nivel', 'N/A')}<br>
+                <b>Giro:</b> {r.get('Giro', 'N/A')}<br>
+                <b>Dirección:</b> {r.get('Domicilio', 'N/A')}<br>
+                <b>Colonia:</b> {r.get('Colonia', 'N/A')}<br>
+                <b>Sector:</b> {r.get('Sector', 'N/A')}<br>
+                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
+                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
+                <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
+                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 4px; border: 1px solid {color_hex}; white-space: normal;'>
                     <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
                 </div>
             </div>
@@ -253,3 +263,4 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
