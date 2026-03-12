@@ -7,19 +7,18 @@ from sqlalchemy import create_engine
 import psycopg2
 import json
 import urllib.parse
-import plotly.express as px
 import time
 
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 
-# 2. ESTILO CSS PERSONALIZADO (Basado en tu imagen de referencia)
+# 2. ESTILO CSS PERSONALIZADO (Fondo negro y bordes cian)
 st.markdown("""
     <style>
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #0c0c0c !important; border-right: 1px solid #00d4ff; }
         
-        /* Contenedor de indicadores compactos con diseño de tu imagen */
+        /* Contenedor de indicadores compactos */
         .metric-row {
             display: flex;
             justify-content: space-around;
@@ -42,9 +41,6 @@ st.markdown("""
         .metric-value { font-size: 20px; font-weight: bold; color: white; margin: 0; padding: 0; }
         .metric-icon { width: 35px; height: 35px; margin-right: 10px; }
 
-        /* Estilo para los títulos de sección en sidebar */
-        .sidebar-title { color: #00d4ff; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-        
         /* Ajustes Sidebar */
         [data-testid="stSidebarUserContent"] div[data-testid="stVerticalBlock"] > div {
             padding-bottom: 0px !important; padding-top: 0px !important; margin-bottom: -5px !important;
@@ -52,7 +48,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# URLS DE ICONOS (Basados en tu imagen)
+# URLS DE ICONOS E IMÁGENES
 ICON_METER = "https://cdn-icons-png.flaticon.com/512/2622/2622744.png"
 ICON_ACCUMULATED = "https://cdn-icons-png.flaticon.com/512/3105/3105807.png"
 ICON_AVG = "https://cdn-icons-png.flaticon.com/512/1570/1570887.png"
@@ -100,11 +96,11 @@ def get_color_logic(nivel, consumo_mes):
     if v <= lim[3]: return colors["ALTO"], "CONSUMO ALTO"
     return colors["MUY ALTO"], "CONSUMO MUY ALTO"
 
-# 4. CARGA DE DATOS INICIAL
+# 4. CARGA DE DATOS
 mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
-# 5. SIDEBAR (FILTROS Y RANKING)
+# 5. SIDEBAR (FILTROS Y ACTUALIZACIÓN)
 with st.sidebar:
     st.image(URL_LOGO_MIAA, use_container_width=True)
     st.divider()
@@ -133,9 +129,9 @@ with st.sidebar:
                 c1, c2 = st.columns([1.5, 1])
                 c1.markdown(f"<span style='color:#81D4FA; font-size:11px;'>{row['Medidor']}</span>", unsafe_allow_html=True)
                 pct = (row['Consumo_diario'] / ranking['Consumo_diario'].max()) * 100
-                c2.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;"><span style="font-size:10px;margin-right:5px;">{row["Consumo_diario"]:,.0f}</span><div style="width:30px;background:#333;height:6px;"><div style="{f"width:{pct}%;background:red;height:6px;"}"></div></div></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;"><span style="font-size:10px;margin-right:5px;">{row["Consumo_diario"]:,.0f}</span><div style="width:30px;background:#333;height:6px;"><div style="width:{pct}%;background:red;height:6px;"></div></div></div>', unsafe_allow_html=True)
 
-# 6. PROCESAMIENTO PARA MAPA
+# 6. PROCESAMIENTO
 agg_map = {col: func for col, func in {
     'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first',
     'Nivel': 'first', 'Nombre': 'first', 'Predio': 'first', 'Domicilio': 'first',
@@ -147,7 +143,7 @@ df_mapa = df_hes.groupby('Medidor').agg(agg_map).reset_index()
 # 7. INTERFAZ PRINCIPAL
 st.title("Medidores inteligentes - Tablero de consumos")
 
-# INDICADORES SUPERIORES (ESTILO IMAGEN_105603.PNG)
+# INDICADORES SUPERIORES COMPACTOS
 st.markdown(f"""
     <div class="metric-row">
         <div class="metric-box">
@@ -172,11 +168,8 @@ st.markdown(f"""
 col_map, col_der = st.columns([3, 1.2])
 
 with col_map:
-    m = folium.Map(location=[21.8853, -102.2916], zoom_start=12, tiles=None)
-    folium.TileLayer('CartoDB dark_matter', name="Mapa Negro", control=True).add_to(m)
-    folium.TileLayer('OpenStreetMap', name="Mapa Estándar", control=True).add_to(m)
-    folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Satélite', control=True).add_to(m)
-    
+    # MAPA CON ESTILO NEGRO POR DEFECTO
+    m = folium.Map(location=[21.8853, -102.2916], zoom_start=12, tiles="CartoDB dark_matter")
     Fullscreen().add_to(m)
 
     if not df_sec.empty:
@@ -189,6 +182,7 @@ with col_map:
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
+            # POPUP COMPLETO RESTAURADO
             pop_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; width: 280px; color: #333; line-height: 1.4;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -209,7 +203,6 @@ with col_map:
             """
             folium.CircleMarker([r['Latitud'], r['Longitud']], radius=5, color=color_hex, fill=True, fill_opacity=0.9, popup=folium.Popup(pop_html, max_width=350)).add_to(m_group)
 
-    folium.LayerControl(collapsed=False).add_to(m)
     res = st_folium(m, width=900, height=520, key="main_map", returned_objects=["last_object_clicked"])
 
 with col_der:
@@ -221,14 +214,9 @@ with col_der:
 
     st.markdown(f'<div style="background:#111;padding:8px;border:1px solid #00d4ff;font-size:18px;font-weight:bold;margin-bottom:5px;">📊 {med_sel if med_sel else "Seleccione medidor"}</div>', unsafe_allow_html=True)
     
+    # HISTÓRICO EXPANDIDO (Ya que quitamos el gráfico circular)
     if med_sel:
         df_v = df_hes[df_hes['Medidor'] == med_sel].sort_values('Fecha', ascending=False)
-        st.dataframe(df_v[['Fecha', 'Lectura', 'Consumo_diario']], height=280, hide_index=True, use_container_width=True)
+        st.dataframe(df_v[['Fecha', 'Lectura', 'Consumo_diario']], height=450, hide_index=True, use_container_width=True)
     else:
-        st.dataframe(df_hes[['Medidor', 'Fecha', 'Lectura', 'Consumo_diario']].tail(12).sort_values(by='Fecha', ascending=False), height=280, hide_index=True, use_container_width=True)
-
-    # GRÁFICO DE DONA (GIRO)
-    if not df_hes.empty and 'Giro' in df_hes.columns:
-        fig = px.pie(df_hes, names='Giro', hole=0.6, color_discrete_sequence=px.colors.qualitative.Safe)
-        fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white", size=10))
-        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(df_hes[['Medidor', 'Fecha', 'Lectura', 'Consumo_diario']].tail(20).sort_values(by='Fecha', ascending=False), height=450, hide_index=True, use_container_width=True)
