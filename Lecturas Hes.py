@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import folium_static
+from folium.plugins import Fullscreen  # <--- Nueva importación
 from sqlalchemy import create_engine
 import psycopg2
 import json
@@ -101,7 +102,6 @@ mysql_engine = get_mysql_engine()
 df_sec = get_sectores_cached()
 
 # --- LÓGICA DE FECHAS EN ESPAÑOL ---
-# --- LÓGICA DE FECHAS DINÁMICAS ---
 ahora = pd.Timestamp.now()
 inicio_mes_actual = ahora.replace(day=1)
 
@@ -125,7 +125,6 @@ with st.sidebar:
     
     st.divider()
 
-    # Selección de rango rápido con todas las opciones solicitadas
     st.write("**📅 Selecciona un rango**")
     opcion_rango = st.selectbox(
         "Rango predefinido",
@@ -138,11 +137,10 @@ with st.sidebar:
             "Año pasado", 
             "Personalizado"
         ],
-        index=0, # Inicia por defecto en "Este mes"
+        index=0,
         label_visibility="collapsed"
     )
 
-    # Lógica de asignación de fechas basada en la selección
     if opcion_rango == "Este mes":
         default_range = (inicio_mes_actual, ahora)
     elif opcion_rango == "Última semana":
@@ -156,10 +154,8 @@ with st.sidebar:
     elif opcion_rango == "Año pasado":
         default_range = (inicio_año_pasado, fin_año_pasado)
     else:
-        # Rango base para la opción personalizada
         default_range = (inicio_mes_actual, ahora)
 
-    # Calendario amigable en español
     try:
         fecha_rango = st.date_input(
             "Periodo de consulta",
@@ -174,7 +170,6 @@ with st.sidebar:
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         
-        # Filtros compactos horizontales con alineación mejorada
         st.markdown("<br>", unsafe_allow_html=True)
         filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
         filtros_activos = {}
@@ -184,7 +179,6 @@ with st.sidebar:
                 opciones = sorted(df_hes[col].unique().astype(str).tolist())
                 c1, c2 = st.columns([1, 2])
                 with c1:
-                    # Margen de 10px para que el texto no "flote" arriba de la caja
                     st.markdown(f"<p style='margin-top:10px; font-size: 14px;'>{col}</p>", unsafe_allow_html=True)
                 with c2:
                     seleccion = st.multiselect("", options=opciones, key=f"f_{col}", label_visibility="collapsed")
@@ -195,7 +189,6 @@ with st.sidebar:
 
         st.divider()
         
-        # --- RANKING TOP CONSUMO (ESTILO ORIGINAL) ---
         st.write("**Ranking Top 10 Consumo**")
         if not df_hes.empty:
             ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
@@ -226,7 +219,7 @@ mapeo_columnas = {
     'Latitud': 'first', 
     'Longitud': 'first',
     'Nivel': 'first', 
-    'ClienteID_API': 'first', # Aquí tomamos el primer ID encontrado
+    'ClienteID_API': 'first', 
     'Nombre': 'first', 
     'Predio': 'first',
     'Domicilio': 'first', 
@@ -238,11 +231,9 @@ mapeo_columnas = {
     'Fecha': 'last'
 }
 
-# Filtramos solo las columnas que realmente existen en el DataFrame actual
 agg_segura = {col: func for col, func in mapeo_columnas.items() if col in df_hes.columns}
 df_mapa = df_hes.groupby('Medidor').agg(agg_segura).reset_index()
 
-# LÓGICA DE ZOOM DINÁMICO
 df_valid_coords = df_mapa[(df_mapa['Latitud'] != 0) & (df_mapa['Longitud'] != 0) & (df_mapa['Latitud'].notnull())]
 
 if not df_valid_coords.empty and (filtros_activos.get("Colonia") or filtros_activos.get("Sector")):
@@ -253,7 +244,6 @@ else:
 # 5. DASHBOARD - VISUALIZACIÓN
 st.title("Medidores inteligentes - Tablero de consumos")
 
-# Métricas principales
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("N° de medidores", f"{len(df_mapa):,}")
 m2.metric("Consumo acumulado m3", f"{df_hes['Consumo_diario'].sum():,.1f}" if 'Consumo_diario' in df_hes.columns else "0")
@@ -266,7 +256,14 @@ with col_map:
     # Creación del mapa base
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
     
-    # Capa de Sectores Hidrométricos (GeoJSON)
+    # --- BOTÓN PANTALLA COMPLETA ---
+    Fullscreen(
+        position="topright",
+        title="Ver en pantalla completa",
+        title_cancel="Salir de pantalla completa",
+        force_separate_button=True,
+    ).add_to(m)
+    
     if not df_sec.empty:
         for _, row in df_sec.iterrows():
             geojson_obj = json.loads(row['geojson_data'])
@@ -277,12 +274,10 @@ with col_map:
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
             ).add_to(m)
 
-    # Capa de Marcadores de Medidores con Popup Detallado
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Construcción del Popup con estilo profesional
             pop_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; width: 300px; color: #333; line-height: 1.4;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -313,12 +308,10 @@ with col_map:
                 popup=folium.Popup(pop_html, max_width=350)
             ).add_to(m)
     
-    # Renderizar mapa
     folium_static(m, width=900, height=550)
 
 with col_der:
     st.write("🟢 **Histórico Reciente**")
-    # Mostramos las últimas 15 lecturas filtradas
     if not df_hes.empty:
         st.dataframe(
             df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), 
@@ -328,9 +321,5 @@ with col_der:
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
 
-# Botón de reinicio al final
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
-
-
-
