@@ -40,6 +40,15 @@ st.markdown("""
         [data-testid="stSidebarUserContent"] {
             padding-top: 0rem !important;
         }
+        
+        /* AJUSTE PARA HACER MÁS CHICO EL LOGO */
+        [data-testid="stSidebarUserContent"] img {
+            margin-top: -70px !important; 
+            max-width: 100px !important; /* Ajusta este valor (ej. 100px, 120px) para reducir el tamaño */
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
         [data-testid="stSidebarUserContent"] img {
             margin-top: -70px !important; 
         }
@@ -327,4 +336,5 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
