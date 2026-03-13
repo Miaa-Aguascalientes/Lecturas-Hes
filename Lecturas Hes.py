@@ -25,7 +25,7 @@ st.markdown("""
             font-size: 20px !important; 
             font-weight: 300 !important;
             color: white !important;
-            line-height: 1.1;
+            line-height: 3.1;
         }
 
         /* AJUSTE DE LOS TÍTULOS (N° de medidores, etc.) */
@@ -321,6 +321,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
