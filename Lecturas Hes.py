@@ -72,9 +72,6 @@ st.markdown("""
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
         
-        /* Ajuste para que las tablas y contenedores se vean mejor en negro */
-        .stDataFrame { background-color: #111111 !important; }
-        
         .map-legend {
             display: flex;
             justify-content: center;
@@ -167,34 +164,26 @@ with st.sidebar:
         st.cache_resource.clear()
         st.rerun()
     st.divider()
-
-    st.write("**📅 Selecciona un rango**")
+    
     opcion_rango = st.selectbox("Rango", ["Este mes", "Última semana", "Mes pasado", "Personalizado"], index=0)
-
-    if opcion_rango == "Este mes": default_range = (inicio_mes_actual, ahora)
-    else: default_range = (inicio_mes_actual, ahora)
-
-    fecha_rango = st.date_input("Periodo", value=default_range, max_value=ahora, format="DD/MM/YYYY")
+    fecha_rango = st.date_input("Periodo", value=(inicio_mes_actual, ahora), max_value=ahora, format="DD/MM/YYYY")
     
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
-        filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Colonia", "Sector"]
-        filtros_activos = {}
-        
-        for col in filtros_sidebar:
+        # Filtros rápidos
+        for col in ["Medidor", "Colonia", "Sector"]:
             if col in df_hes.columns:
-                opciones = sorted(df_hes[col].unique().astype(str).tolist())
-                seleccion = st.multiselect(col, options=opciones, key=f"f_{col}")
-                filtros_activos[col] = seleccion
-                if seleccion: df_hes = df_hes[df_hes[col].astype(str).isin(seleccion)]
+                sel = st.multiselect(col, sorted(df_hes[col].unique().astype(str).tolist()))
+                if sel: df_hes = df_hes[df_hes[col].astype(str).isin(sel)]
     else:
         st.stop()
 
 # PROCESAMIENTO
-agg_config = {'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first', 'Nivel': 'first', 'ClienteID_API': 'first', 'Nombre': 'first', 'Fecha': 'last'}
-df_mapa = df_hes.groupby('Medidor').agg({k: v for k, v in agg_config.items() if k in df_hes.columns}).reset_index()
-
-lat_centro, lon_centro = 21.8853, -102.2916
+mapeo = {'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first', 'Nivel': 'first', 
+         'ClienteID_API': 'first', 'Nombre': 'first', 'Predio': 'first', 'Domicilio': 'first', 
+         'Colonia': 'first', 'Sector': 'first', 'Fecha': 'last'}
+agg_safe = {k: v for k, v in mapeo.items() if k in df_hes.columns}
+df_mapa = df_hes.groupby('Medidor').agg(agg_safe).reset_index()
 
 # DASHBOARD
 st.markdown('<div class="titulo-superior">Medidores inteligentes - Tablero de consumos</div>', unsafe_allow_html=True)
@@ -206,12 +195,11 @@ m2.metric("💧 Consumo total", f"{df_hes['Consumo_diario'].sum():,.1f} m³")
 m3.metric("📈 Promedio diario", f"{df_hes['Consumo_diario'].mean():.2f} m³")
 m4.metric("📋 Total lecturas", f"{len(df_hes):,}")
 
-# --- SECCIÓN MAPA Y TABLA LADO A LADO ---
-# Usamos una proporción de 5.5 a 1 para que el mapa sea dominante y rellene el espacio
-col_mapa_grande, col_tabla_der = st.columns([5.5, 1])
+# LADO A LADO
+col_mapa, col_tabla = st.columns([5.5, 1])
 
-with col_mapa_grande:
-    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=12, tiles="CartoDB dark_matter")
+with col_mapa:
+    m = folium.Map(location=[21.8853, -102.2916], zoom_start=12, tiles="CartoDB dark_matter")
     Fullscreen(position="topright").add_to(m)
     
     if not df_sec.empty:
@@ -221,10 +209,27 @@ with col_mapa_grande:
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
-            folium.CircleMarker(location=[r['Latitud'], r['Longitud']], radius=2.5, color=color_hex, fill=True, fill_opacity=0.9).add_to(m)
+            
+            # --- REINTEGRACIÓN DEL POPUP (TOOLTIP) ---
+            tooltip_html = f"""
+            <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; padding: 10px; white-space: nowrap;'>
+                <h5 style='margin:0 0 5px 0; color: #007bff; border-bottom: 1px solid #ccc;'>Detalle: {r['Medidor']}</h5>
+                <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')}<br>
+                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} m³<br>
+                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} m³<br>
+                <b>Ubicación:</b> {r.get('Colonia', 'N/A')}<br>
+                <div style='margin-top:5px; padding:3px; background:{color_hex}22; border:1px solid {color_hex}; text-align:center;'>
+                    <b style='color:{color_hex};'>{etiqueta}</b>
+                </div>
+            </div>
+            """
+            folium.CircleMarker(
+                location=[r['Latitud'], r['Longitud']], 
+                radius=3, color=color_hex, fill=True, fill_opacity=0.9,
+                tooltip=folium.Tooltip(tooltip_html, sticky=True)
+            ).add_to(m)
     
-    # Mapa mucho más ancho y alto para rellenar el espacio
-    folium_static(m, width=1100, height=700)
+    folium_static(m, width=1100, height=650)
 
     st.markdown("""
         <div class="map-legend">
@@ -233,34 +238,28 @@ with col_mapa_grande:
             <div class="legend-item"><div class="legend-color" style="background-color: #FF8C00;"></div>BAJO</div>
             <div class="legend-item"><div class="legend-color" style="background-color: #FFFFFF;"></div>CERO</div>
             <div class="legend-item"><div class="legend-color" style="background-color: #FF0000;"></div>MUY ALTO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>ALTO</div>
         </div>
     """, unsafe_allow_html=True)
 
-with col_tabla_der:
-    st.markdown("<p style='color:#00d4ff; font-weight:bold; margin-bottom:5px;'>🟢 Histórico Reciente</p>", unsafe_allow_html=True)
+with col_tabla:
+    st.markdown("<p style='color:#00d4ff; font-weight:bold;'>🟢 Histórico</p>", unsafe_allow_html=True)
     if not df_hes.empty:
-        # Tabla ajustada al lateral
-        st.dataframe(
-            df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(25).sort_values(by='Fecha', ascending=False), 
-            hide_index=True, 
-            height=670 # Altura similar a la del mapa
-        )
+        st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(20).sort_values(by='Fecha', ascending=False), 
+                     hide_index=True, height=620)
 
-# --- GRÁFICOS INFERIORES ---
+# GRÁFICOS
 st.divider()
+# Gráfico Diario
+df_d = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
+fig1 = px.bar(df_d, x='Fecha', y='Consumo_diario', text_auto=',.2f', title="Consumo Diario Total")
+fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+fig1.update_yaxes(tickformat=",")
+st.plotly_chart(fig1, use_container_width=True)
 
-# 1. Consumo Total por Día (Ancho total)
-df_diario = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
-fig_diario = px.bar(df_diario, x='Fecha', y='Consumo_diario', text_auto=',.2f', title="Consumo Total por Día")
-fig_diario.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=350)
-fig_diario.update_yaxes(tickformat=",")
-st.plotly_chart(fig_diario, use_container_width=True)
-
-# 2. Consumo por Medidor (Todos los registros, ancho total)
-df_todos_med = df_mapa.sort_values(by='Consumo_diario', ascending=False)
-fig_med = px.bar(df_todos_med, x='Medidor', y='Consumo_diario', title="Consumo por Medidor (Todos)")
-fig_med.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=400)
-fig_med.update_yaxes(tickformat=",")
-fig_med.update_xaxes(type='category')
-st.plotly_chart(fig_med, use_container_width=True)
+# Gráfico Medidores (Todos)
+df_m = df_mapa.sort_values(by='Consumo_diario', ascending=False)
+fig2 = px.bar(df_m, x='Medidor', y='Consumo_diario', title="Consumo por Medidor (Completo)")
+fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+fig2.update_yaxes(tickformat=",")
+fig2.update_xaxes(type='category')
+st.plotly_chart(fig2, use_container_width=True)
