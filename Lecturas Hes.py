@@ -13,7 +13,7 @@ import time
 st.set_page_config(
     page_title="MIAA - Sincronizador",
     page_icon="💧", # Aquí puedes poner un emoji
-    layout="wide"
+    layout="wide"  
 )
 
 # 1. CONFIGURACIÓN
@@ -22,6 +22,12 @@ st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 # ESTILO CSS
 st.markdown("""
     <style>
+        /* AJUSTE DE TAMAÑO DE NÚMEROS */
+        [data-testid="stMetricValue"] {
+            font-size: 30px !important; 
+            font-weight: 700 !important;
+        }
+        
         /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR */
         .titulo-superior {
             position: fixed;
@@ -303,6 +309,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
