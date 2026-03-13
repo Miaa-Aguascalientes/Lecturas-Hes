@@ -43,35 +43,14 @@ st.markdown("""
             margin-right: auto;
             display: block;
         }
-        [data-testid="stSidebarUserContent"] img {
-            margin-top: -60px !important;
-        }
         .block-container {
             padding-top: 1.8rem !important;
             padding-bottom: 0rem !important;
         }
-        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stMetric"]) {
-            width: 60% !important;
-            gap: 0px !important;
-        }
-        [data-testid="stMetric"] {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 2px 0px !important;
-        }
-        [data-testid="stMetricValue"] {
-            font-size: 1.6rem !important;
-            font-weight: bold;
-            justify-content: center !important;
-        }
-        [data-testid="stMetricLabel"] {
-            justify-content: center !important;
-        }
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
         
+        /* Ajuste de leyenda */
         .map-legend {
             display: flex;
             justify-content: center;
@@ -170,7 +149,6 @@ with st.sidebar:
     
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
-        # Filtros rápidos
         for col in ["Medidor", "Colonia", "Sector"]:
             if col in df_hes.columns:
                 sel = st.multiselect(col, sorted(df_hes[col].unique().astype(str).tolist()))
@@ -195,8 +173,8 @@ m2.metric("💧 Consumo total", f"{df_hes['Consumo_diario'].sum():,.1f} m³")
 m3.metric("📈 Promedio diario", f"{df_hes['Consumo_diario'].mean():.2f} m³")
 m4.metric("📋 Total lecturas", f"{len(df_hes):,}")
 
-# LADO A LADO
-col_mapa, col_tabla = st.columns([5.5, 1])
+# --- SECCIÓN DE MAPA Y TABLA (AJUSTADO PARA MEJOR VISIBILIDAD) ---
+col_mapa, col_tabla = st.columns([4.5, 1.5]) # Se aumentó el ancho de la columna de la tabla
 
 with col_mapa:
     m = folium.Map(location=[21.8853, -102.2916], zoom_start=12, tiles="CartoDB dark_matter")
@@ -210,16 +188,23 @@ with col_mapa:
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # --- REINTEGRACIÓN DEL POPUP (TOOLTIP) ---
             tooltip_html = f"""
-            <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; padding: 10px; white-space: nowrap;'>
-                <h5 style='margin:0 0 5px 0; color: #007bff; border-bottom: 1px solid #ccc;'>Detalle: {r['Medidor']}</h5>
-                <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')}<br>
-                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} m³<br>
-                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} m³<br>
-                <b>Ubicación:</b> {r.get('Colonia', 'N/A')}<br>
-                <div style='margin-top:5px; padding:3px; background:{color_hex}22; border:1px solid {color_hex}; text-align:center;'>
-                    <b style='color:{color_hex};'>{etiqueta}</b>
+            <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
+                <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
+                <b>Cliente:</b> {r.get('ClienteID_API', 'N/A')} - <b>Serie:</b> {r['Medidor']}<br>
+                <b>Fecha instalación:</b> {r.get('Primer_instalacion', 'N/A')}<br>
+                <b>Predio:</b> {r.get('Predio', 'N/A')}<br>
+                <b>Nombre:</b> {r.get('Nombre', 'N/A')}<br>
+                <b>Tarifa:</b> {r.get('Nivel', 'N/A')}<br>
+                <b>Giro:</b> {r.get('Giro', 'N/A')}<br>
+                <b>Dirección:</b> {r.get('Domicilio', 'N/A')}<br>
+                <b>Colonia:</b> {r.get('Colonia', 'N/A')}<br>
+                <b>Sector:</b> {r.get('Sector', 'N/A')}<br>
+                <b>Lectura:</b> {r.get('Lectura', 0):,.2f} (m3) - <b>Última:</b> {r.get('Fecha', 'N/A')}<br>
+                <b>Consumo:</b> {r.get('Consumo_diario', 0):,.2f} (m3) acumulado<br>
+                <b>Tipo de comunicación:</b> {r.get('Metodoid_API', 'Lorawan')}<br><br>
+                <div style='text-align: center; padding: 5px; background-color: {color_hex}22; border-radius: 2px; border: 1px solid {color_hex}; white-space: normal;'>
+                    <b style='color: {color_hex};'>ANILLAS DE CONSUMO: {etiqueta}</b>
                 </div>
             </div>
             """
@@ -229,7 +214,7 @@ with col_mapa:
                 tooltip=folium.Tooltip(tooltip_html, sticky=True)
             ).add_to(m)
     
-    folium_static(m, width=1100, height=650)
+    folium_static(m, width=950, height=650) # Ancho del mapa ajustado proporcionalmente
 
     st.markdown("""
         <div class="map-legend">
@@ -242,21 +227,26 @@ with col_mapa:
     """, unsafe_allow_html=True)
 
 with col_tabla:
-    st.markdown("<p style='color:#00d4ff; font-weight:bold;'>🟢 Histórico</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#00d4ff; font-weight:bold; font-size: 16px; margin-bottom: 5px;'>🟢 Histórico Reciente</p>", unsafe_allow_html=True)
     if not df_hes.empty:
-        st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(20).sort_values(by='Fecha', ascending=False), 
-                     hide_index=True, height=620)
+        # Mostramos solo las columnas clave para evitar el amontonamiento
+        df_display = df_hes[['Fecha', 'Consumo_diario']].tail(30).sort_values(by='Fecha', ascending=False)
+        df_display.columns = ['Fecha', 'Consumo (m³)']
+        st.dataframe(
+            df_display, 
+            hide_index=True, 
+            height=620,
+            use_container_width=True
+        )
 
-# GRÁFICOS
+# GRÁFICOS INFERIORES
 st.divider()
-# Gráfico Diario
 df_d = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
 fig1 = px.bar(df_d, x='Fecha', y='Consumo_diario', text_auto=',.2f', title="Consumo Diario Total")
 fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
 fig1.update_yaxes(tickformat=",")
 st.plotly_chart(fig1, use_container_width=True)
 
-# Gráfico Medidores (Todos)
 df_m = df_mapa.sort_values(by='Consumo_diario', ascending=False)
 fig2 = px.bar(df_m, x='Medidor', y='Consumo_diario', title="Consumo por Medidor (Completo)")
 fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
