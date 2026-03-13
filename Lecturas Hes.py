@@ -10,11 +10,11 @@ import urllib.parse
 import plotly.express as px
 import time
 
-# 1. CONFIGURACIÓN
-st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
-    page_title="MIAA - Sincronizador",
-    page_icon="💧", # Aquí puedes poner un emoji
-    layout="wide"  
+# 1. CONFIGURACIÓN DE PÁGINA (Solo debe haber UNA vez)
+st.set_page_config(
+    page_title="MIAA - Tablero de Consumos",
+    page_icon="💧",
+    layout="wide"
 )
 
 # ESTILO CSS
@@ -22,8 +22,8 @@ st.markdown("""
     <style>
         /* AJUSTE DE TAMAÑO Y ALINEACIÓN DE NÚMEROS */
         [data-testid="stMetricValue"] {
-            font-size: 20px !important; 
-            font-weight: 300 !important;
+            font-size: 55px !important; 
+            font-weight: 400 !important;
             color: white !important;
             line-height: 1.1;
         }
@@ -33,25 +33,23 @@ st.markdown("""
             font-size: 16px !important;
             font-weight: bold !important;
             color: white !important;
-            margin-bottom: -15px !important; /* Acerca el título al número */
+            margin-bottom: -15px !important;
         }
 
         /* ASEGURAR ALINEACIÓN A LA IZQUIERDA */
         [data-testid="stMetric"] {
             text-align: left;
         }
-        
+
         /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR */
         .titulo-superior {
             position: fixed;
             top: 20px; 
             left: 500px; 
-            transform: none; 
             z-index: 9999999;
             color: white;
             font-size: 1.1rem;
             font-weight: bold;
-            line-height: normal;
             pointer-events: none;
         }
 
@@ -322,6 +320,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
