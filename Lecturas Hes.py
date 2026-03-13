@@ -22,18 +22,19 @@ st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 # ESTILO CSS
 st.markdown("""
     <style>
-        /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR (Restaurado) */
+        /* 1. POSICIONAR EL TÍTULO CENTRADO EN LA BARRA SUPERIOR */
         .titulo-superior {
             position: fixed;
-            top: 20px; 
-            left: 300px; 
-            transform: none; 
+            top: 15px;            /* Ajuste ligero para que luzca centrado verticalmente en la barra */
+            left: 50%;            /* Lo mueve al centro exacto de la pantalla */
+            transform: translateX(-50%); /* Lo desplaza hacia la izquierda el 50% de su propio ancho */
             z-index: 9999999;
             color: white;
-            font-size: 1.1rem;
+            font-size: 1.2rem;    /* Aumentado ligeramente para mejor visibilidad */
             font-weight: bold;
             line-height: normal;
             pointer-events: none;
+            white-space: nowrap;  /* Evita que el título se rompa en dos líneas */
         }
 
         /* 2. SUBIR EL LOGOTIPO DEL SIDEBAR */
@@ -333,6 +334,7 @@ with col_der:
         st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
+
 
 
 
