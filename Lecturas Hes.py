@@ -22,11 +22,11 @@ st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 # ESTILO CSS
 st.markdown("""
     <style>
-        /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR */
+        /* 1. POSICIONAR EL TÍTULO EN LA BARRA NEGRA SUPERIOR (Restaurado) */
         .titulo-superior {
             position: fixed;
             top: 20px; 
-            left: 300px; 
+            left: 500px; 
             transform: none; 
             z-index: 9999999;
             color: white;
@@ -50,36 +50,33 @@ st.markdown("""
             padding-bottom: 0rem !important;
         }
 
-        /* --- NUEVAS MODIFICACIONES: CENTRADO Y COMPACTACIÓN --- */
+        /* --- MODIFICACIÓN: INDICADORES JUNTOS Y A LA IZQUIERDA --- */
         
-        /* Forzar que las columnas no tengan espacio entre ellas */
-        [data-testid="stHorizontalBlock"] {
-            gap: 0rem !important;
+        /* Ajustamos solo el contenedor que tiene las métricas */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stMetric"]) {
+            width: 60% !important; /* Limitamos el ancho para que se peguen a la izquierda */
+            gap: 0px !important;   /* Eliminamos espacio entre columnas */
         }
 
-        /* Centrar todo el contenido de la métrica (Título y Número) */
+        /* Centrado de texto dentro de cada indicador */
         [data-testid="stMetric"] {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            padding: 5px 0px !important;
-            width: 100% !important;
+            padding: 2px 0px !important;
         }
 
-        /* Ajuste específico para el contenedor del valor numérico */
+        /* Números más pequeños y centrados */
         [data-testid="stMetricValue"] {
             font-size: 1.6rem !important;
             font-weight: bold;
-            width: fit-content;
-            margin: 0 auto;
+            justify-content: center !important;
         }
 
-        /* Ajuste para el título de la métrica para asegurar centrado */
+        /* Títulos de indicadores centrados */
         [data-testid="stMetricLabel"] {
-            display: flex;
-            justify-content: center;
-            width: 100%;
+            justify-content: center !important;
         }
 
         /* 4. ESTILOS GENERALES Y SIDEBAR */
@@ -264,7 +261,7 @@ else:
 # DASHBOARD
 st.markdown('<div class="titulo-superior">Medidores inteligentes - Tablero de consumos</div>', unsafe_allow_html=True)
 
-# Usamos 4 columnas. El CSS de arriba se encarga de juntarlas y centrar el texto
+# Los indicadores
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("N° de medidores", f"{len(df_mapa):,}")
 m2.metric("Consumo acumulado m3", f"{df_hes['Consumo_diario'].sum():,.1f}" if 'Consumo_diario' in df_hes.columns else "0")
@@ -330,5 +327,3 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
-
-
