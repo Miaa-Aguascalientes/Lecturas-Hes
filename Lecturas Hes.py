@@ -334,17 +334,61 @@ with col_map:
         </div>
     """, unsafe_allow_html=True)
 
+# --- SECCIÓN DE GRÁFICOS NUEVOS ---
+st.divider()
+st.subheader("📊 Análisis de Consumo General")
+
+# Crear dos columnas para las gráficas
+col_graf1, col_graf2 = st.columns(2)
+
+with col_graf1:
+    st.write("**Consumo Total por Día**")
+    if not df_hes.empty:
+        # Agrupamos por fecha para obtener el consumo total de todos los medidores ese día
+        df_diario = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
+        fig_diario = px.bar(
+            df_diario, 
+            x='Fecha', 
+            y='Consumo_diario',
+            text_auto='.2s',
+            color_discrete_sequence=['#00d4ff'] # Color azul similar a la imagen
+        )
+        fig_diario.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font_color="white",
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=400
+        )
+        fig_diario.update_traces(textposition='outside')
+        st.plotly_chart(fig_diario, use_container_width=True)
+
+with col_graf2:
+    st.write("**Consumo por Medidor (Top 50)**")
+    if not df_mapa.empty:
+        # Usamos df_mapa que ya tiene el consumo sumado por medidor
+        df_medidores = df_mapa.sort_values(by='Consumo_diario', ascending=False).head(50)
+        fig_medidor = px.bar(
+            df_medidores, 
+            x='Medidor', 
+            y='Consumo_diario',
+            color_discrete_sequence=['#00d4ff']
+        )
+        fig_medidor.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font_color="white",
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=400
+        )
+        # Rotar etiquetas del eje X para que sean legibles
+        fig_medidor.update_xaxes(tickangle=45)
+        st.plotly_chart(fig_medidor, use_container_width=True)
+
 with col_der:
     st.write("🟢 **Histórico Reciente**")
     if not df_hes.empty:
         st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
-
-
-
-
-
-
-
 
