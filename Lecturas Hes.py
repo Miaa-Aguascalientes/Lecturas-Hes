@@ -50,7 +50,7 @@ st.markdown("""
             display: block;
         }
         [data-testid="stSidebarUserContent"] img {
-            margin-top: -80px !important; /* Ajusta este valor para subirlo más o menos */
+            margin-top: -60px !important; /* Ajusta este valor para subirlo más o menos */
         }
 
         /* 3. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR PRINCIPAL */
@@ -336,6 +336,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
