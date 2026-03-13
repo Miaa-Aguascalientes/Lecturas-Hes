@@ -26,7 +26,7 @@ st.markdown("""
         .titulo-superior {
             position: fixed;
             top: 20px; 
-            left: 500px; 
+            left: 300px; 
             transform: none; 
             z-index: 9999999;
             color: white;
@@ -330,4 +330,5 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
