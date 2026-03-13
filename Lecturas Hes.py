@@ -255,7 +255,7 @@ promedio = df_hes['Consumo_diario'].mean() if 'Consumo_diario' in df_hes.columns
 m3.metric("📈 Promedio diario", f"{promedio:.2f} m³")
 m4.metric("📋 Total lecturas", f"{len(df_hes):,}")
 
-col_map, col_der = st.columns([3, 1.2])
+col_map, col_der = st.columns([6, 1.2])
 
 with col_map:
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
@@ -345,3 +345,4 @@ if not df_hes.empty:
     fig_med.update_yaxes(tickformat=",") # Formato de miles en el eje Y
     fig_med.update_xaxes(tickangle=45, type='category') # Categoría para evitar que Plotly agrupe IDs numéricos
     st.plotly_chart(fig_med, use_container_width=True)
+
