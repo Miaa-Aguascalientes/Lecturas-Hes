@@ -33,7 +33,7 @@ st.markdown("""
             font-size: 16px !important;
             font-weight: bold !important;
             color: white !important;
-            margin-bottom: -100px !important;
+            margin-bottom: -10px !important;
         }
 
         /* ASEGURAR ALINEACIÓN A LA IZQUIERDA */
@@ -48,7 +48,7 @@ st.markdown("""
             left: 500px; 
             z-index: 9999999;
             color: white;
-            font-size: 3.1rem;
+            font-size: 1.1rem;
             font-weight: bold;
             line-height: normal;
             pointer-events: none;
@@ -321,6 +321,7 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
+
 
 
 
