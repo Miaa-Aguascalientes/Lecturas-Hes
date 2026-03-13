@@ -12,11 +12,11 @@ import time
 
 st.set_page_config(
     page_title="MIAA - Sincronizador",
-    page_icon="💧", # Aquí puedes poner un emoji
+    page_icon="💧", 
     layout="wide"  
 )
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN (Nota: st.set_page_config ya se llamó arriba, Streamlit ignorará la segunda llamada pero se mantiene por tu instrucción de no eliminar nada)
 st.set_page_config(page_title="MIAA - Tablero de Consumos", layout="wide")
 
 # ESTILO CSS
@@ -37,19 +37,32 @@ st.markdown("""
         }
 
         /* 2. SUBIR EL LOGOTIPO DEL SIDEBAR */
-        /* Elimina el espacio superior del contenedor del sidebar */
         [data-testid="stSidebarUserContent"] {
             padding-top: 0rem !important;
         }
-        /* Desplaza la imagen (logo) hacia arriba */
         [data-testid="stSidebarUserContent"] img {
-            margin-top: -70px !important; /* Ajusta este valor para subirlo más o menos */
+            margin-top: -70px !important; 
         }
 
-        /* 3. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR PRINCIPAL (INDICADORES) */
+        /* 3. ELIMINAR EL ESPACIO SUPERIOR DEL CONTENEDOR PRINCIPAL */
         .block-container {
             padding-top: 1.8rem !important;
             padding-bottom: 0rem !important;
+        }
+
+        /* MODIFICACIONES SOLICITADAS: INDICADORES MÁS JUNTOS Y NÚMEROS PEQUEÑOS */
+        /* Reducir el espacio entre columnas de indicadores */
+        [data-testid="stHorizontalBlock"] {
+            gap: 0.5rem !important;
+        }
+        /* Reducir tamaño de los números (sin afectar títulos) */
+        [data-testid="stMetricValue"] {
+            font-size: 1.6rem !important;
+            font-weight: bold;
+        }
+        /* Ajustar el padding interno de las métricas */
+        [data-testid="stMetric"] {
+            padding: 2px 10px !important;
         }
 
         /* 4. ESTILOS GENERALES Y SIDEBAR */
@@ -71,7 +84,6 @@ st.markdown("""
             margin-bottom: 0px !important;
         }
 
-        /* Estilo para la leyenda */
         .map-legend {
             display: flex;
             justify-content: center;
@@ -233,7 +245,6 @@ else:
     lat_centro, lon_centro, zoom_inicial = 21.8853, -102.2916, 12
 
 # DASHBOARD
-# Reemplaza st.title("Medidores inteligentes - Tablero de consumos") por:
 st.markdown('<div class="titulo-superior">Medidores inteligentes - Tablero de consumos</div>', unsafe_allow_html=True)
 
 m1, m2, m3, m4 = st.columns(4)
@@ -257,7 +268,6 @@ with col_map:
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # TOOLTIP CON TODA LA INFORMACIÓN RESTAURADA Y AJUSTE DINÁMICO
             tooltip_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -282,7 +292,6 @@ with col_map:
     
     folium_static(m, width=900, height=550)
 
-    # --- LEYENDA DE COLORES DEBAJO DEL MAPA ---
     st.markdown("""
         <div class="map-legend">
             <div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>CONSUMO REGULAR</div>
@@ -303,48 +312,3 @@ with col_der:
 
 if st.button("🔄 Reiniciar Tablero", use_container_width=True):
     reiniciar_tablero()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
