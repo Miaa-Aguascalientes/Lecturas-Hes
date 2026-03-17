@@ -206,7 +206,7 @@ with st.sidebar:
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         st.markdown("<br>", unsafe_allow_html=True)
-        filtros_sidebar = ["Cliente", "Metodo", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
+        filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
         filtros_activos = {}
         
         for col in filtros_sidebar:
