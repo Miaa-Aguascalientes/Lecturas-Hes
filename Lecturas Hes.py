@@ -83,6 +83,16 @@ st.markdown("""
         .stMultiSelect {
             margin-bottom: 0px !important;
         }
+        
+        /* Nuevo estilo para el marco del mapa */
+        .map-container {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #111111;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
         .map-legend {
             display: flex;
             justify-content: center;
@@ -323,15 +333,29 @@ col_map, col_der = st.columns([3, 1.2])
 # --- SECCIÓN DEL MAPA ACTUALIZADA -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 with col_map:
-    # 1. Crear el mapa base con el estilo oscuro solicitado anteriormente
+    # --- ESTILO DEL MARCO (Inyectado aquí para asegurar el contenedor) ---
+    st.markdown("""
+        <style>
+            .map-container {
+                border: 1px solid #333;
+                border-radius: 8px;
+                padding: 12px;
+                background-color: #111111;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+                margin-bottom: 10px;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 1. Crear el mapa base
     m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
     Fullscreen(position="topright", title="Ver en pantalla completa", title_cancel="Salir de pantalla completa", force_separate_button=True).add_to(m)
     
-    # 2. Definir los grupos de capas (esto permite el encendido/apagado)
+    # 2. Definir los grupos de capas
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos (QGIS)", show=True)
     fg_medidores = folium.FeatureGroup(name="Medidores Inteligentes", show=True)
 
-    # 3. Procesar y añadir Sectores al grupo fg_sectores
+    # 3. Procesar y añadir Sectores
     if not df_sec.empty:
         for _, row in df_sec.iterrows():
             geojson_obj = json.loads(row['geojson_data'])
@@ -342,13 +366,11 @@ with col_map:
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
             ).add_to(fg_sectores)
 
-    # 4. Procesar y añadir Medidores al grupo fg_medidores
+    # 4. Procesar y añadir Medidores
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
-            # Obtener lógica de color y etiqueta
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Tu tooltip_html original completo
             tooltip_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -370,7 +392,6 @@ with col_map:
             </div>
             """
             
-            # Añadir el marcador al grupo fg_medidores en lugar de directamente al mapa
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']], 
                 radius=3, 
@@ -380,16 +401,17 @@ with col_map:
                 tooltip=folium.Tooltip(tooltip_html, sticky=True)
             ).add_to(fg_medidores)
 
-    # 5. Agregar los grupos al mapa y el control de capas
+    # 5. Agregar grupos y control de capas
     fg_sectores.add_to(m)
     fg_medidores.add_to(m)
-    
-    # LayerControl añade el menú desplegable en la esquina superior derecha
     folium.LayerControl(position='topright', collapsed=False).add_to(m)
 
-    # Renderizar en Streamlit
-    folium_static(m, width=900, height=550)
+    # 6. Renderizar con MARCO ESTILIZADO
+    st.markdown('<div class="map-container">', unsafe_allow_html=True)
+    folium_static(m, width=880, height=550)
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    # Leyenda (ya tiene su propio estilo en el CSS superior)
     st.markdown("""
         <div class="map-legend">
             <div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>CONSUMO REGULAR</div>
@@ -400,11 +422,12 @@ with col_map:
             <div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>CONSUMO ALTO</div>
         </div>
     """, unsafe_allow_html=True)
-
+    
+# --- INTEGRACIÓN DEl MARCO DERECHO DE LECTURAS ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 with col_der:
     st.write("🟢 **Histórico Reciente**")
     if not df_hes.empty:
-        st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
+        st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(31).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
     else:
         st.info("No hay lecturas para el periodo seleccionado.")
 
