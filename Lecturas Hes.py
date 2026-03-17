@@ -195,7 +195,8 @@ with st.sidebar:
             ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"], 
             index=0
         )
-
+        
+        # Lógica de fechas simplificada
         if opcion_rango == "Este mes": default_range = (inicio_mes_actual, ahora)
         elif opcion_rango == "Última semana": default_range = (ahora - pd.Timedelta(days=7), ahora)
         elif opcion_rango == "Mes pasado": default_range = (inicio_mes_pasado, ultimo_dia_mes_pasado)
@@ -205,50 +206,66 @@ with st.sidebar:
         else: default_range = (inicio_mes_actual, ahora)
 
         try:
-            fecha_rango = st.date_input("Periodo", value=default_range, max_value=ahora, format="DD/MM/YYYY")
+            fecha_rango = st.date_input("Periodo", value=default_range, max_value=ahora, format="DD/MM/YYYY", label_visibility="collapsed")
         except:
             st.stop()
     
     # --- SECCIÓN 2: FILTROS TÉCNICOS ---
     if len(fecha_rango) == 2:
-        # Carga inicial de datos para los filtros
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         
         with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=False):
-            filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
-            filtros_activos = {}
+            # Diccionario para nombres amigables solicitados
+            mapeo_nombres = {
+                "ClienteID_API": "Cliente",
+                "Metodoid_API": "Metodo",
+                "Medidor": "Medidor",
+                "Predio": "Predio",
+                "Colonia": "Colonia",
+                "Giro": "Giro",
+                "Sector": "Sector"
+            }
             
-            for col in filtros_sidebar:
-                if col in df_hes.columns:
-                    opciones = sorted(df_hes[col].unique().astype(str).tolist())
-                    seleccion = st.multiselect(f"Filtrar por {col}", options=opciones, key=f"f_{col}")
-                    filtros_activos[col] = seleccion
+            filtros_activos = {}
+            for col_real, nombre_amigable in mapeo_nombres.items():
+                if col_real in df_hes.columns:
+                    opciones = sorted(df_hes[col_real].unique().astype(str).tolist())
+                    
+                    # Layout: Título a la izquierda, Selector a la derecha
+                    col_tit, col_sel = st.columns([1, 2])
+                    with col_tit:
+                        st.markdown(f"<p style='margin-top:8px; font-weight:bold; font-size:13px;'>{nombre_amigable}</p>", unsafe_allow_html=True)
+                    with col_sel:
+                        seleccion = st.multiselect("", options=opciones, key=f"f_{col_real}", label_visibility="collapsed")
+                    
+                    filtros_activos[col_real] = seleccion
                     if seleccion:
-                        df_hes = df_hes[df_hes[col].astype(str).isin(seleccion)]
+                        df_hes = df_hes[df_hes[col_real].astype(str).isin(seleccion)]
 
-        # --- SECCIÓN 3: RANKING ---
+        # --- SECCIÓN 3: RANKING (DATOS MÁS GRANDES) ---
         with st.expander("🏆 RANKING TOP 10", expanded=True):
             if not df_hes.empty:
                 ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
                 max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
                 
                 for _, row in ranking_data.iterrows():
-                    rc1, rc2 = st.columns([1.2, 1])
-                    rc1.markdown(f"<p style='font-size: 11px; margin-bottom: 0px;'>{row['Medidor']}</p>", unsafe_allow_html=True)
+                    # Aumentamos el tamaño de fuente y el espacio de la barra
+                    rc1, rc2 = st.columns([1.1, 1])
+                    rc1.markdown(f"<p style='font-size: 14px; font-weight: bold; color: #81D4FA; margin-bottom: 2px;'>{row['Medidor']}</p>", unsafe_allow_html=True)
+                    
                     pct = (row['Consumo_diario'] / max_c) * 100
                     rc2.markdown(
-                        f'''<div style="display: flex; align-items: center; justify-content: flex-end;">
-                            <span style="font-size: 10px; margin-right: 5px;">{row["Consumo_diario"]:,.0f}</span>
-                            <div style="width: 35px; background-color: #333; height: 6px; border-radius: 2px;">
-                                <div style="width: {pct}%; background-color: #FF0000; height: 6px; border-radius: 2px;"></div>
+                        f'''<div style="display: flex; align-items: center; justify-content: flex-end; height: 25px;">
+                            <span style="font-size: 13px; font-weight: bold; margin-right: 8px;">{row["Consumo_diario"]:,.0f}</span>
+                            <div style="width: 50px; background-color: #333; height: 10px; border-radius: 3px;">
+                                <div style="width: {pct}%; background-color: #FF0000; height: 10px; border-radius: 3px;"></div>
                             </div>
                         </div>''', unsafe_allow_html=True)
             else:
                 st.write("Sin datos")
 
-        st.markdown('<div style="background-color: #B22222; padding: 8px; border-radius: 5px; text-align: center; margin-top: 10px; font-size: 12px;">⚠️ <b>INFORME ALARMAS</b></div>', unsafe_allow_html=True)
+        st.markdown('<div style="background-color: #B22222; padding: 10px; border-radius: 5px; text-align: center; margin-top: 15px; font-weight: bold;">⚠️ INFORME ALARMAS</div>', unsafe_allow_html=True)
     else:
-        st.info("Selecciona un rango de fechas.")
         st.stop()
 
 # PROCESAMIENTO
