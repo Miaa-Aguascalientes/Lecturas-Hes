@@ -84,15 +84,6 @@ st.markdown("""
             margin-bottom: 0px !important;
         }
         
-        /* Nuevo estilo para el marco del mapa */
-        .map-container {
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 10px;
-            background-color: #111111;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-
         .map-legend {
             display: flex;
             justify-content: center;
