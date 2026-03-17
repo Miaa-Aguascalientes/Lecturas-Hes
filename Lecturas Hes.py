@@ -324,27 +324,50 @@ col_map, col_der = st.columns([3, 1.2])
 # --- SECCIÓN DEL MAPA ACTUALIZADA -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 with col_map:
-    # --- ESTILO CORREGIDO: Panel Negro Integrado ---
+    # --- ESTILO TÉCNICO: Panel Negro Profundo ---
     st.markdown("""
         <style>
-            .map-container-fixed {
-                background-color: #0e1117; /* Fondo oscuro estándar de Streamlit */
+            .map-container-tecnico {
+                background-color: #000000; /* Negro puro como el fondo del app */
+                border: 1px solid #1e1e1e; /* Borde sutil que delimita el panel */
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.5);
+                margin-bottom: 10px;
+            }
+            /* Redondeamos las esquinas del mapa interno para que no "salgan" del marco */
+            .folium-map {
+                border-radius: 10px !important;
+            }
+            /* Estilo personalizado para la leyenda dentro del panel */
+            .map-legend-integrated {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 15px;
+                padding: 12px;
+                background-color: #000000;
                 border: 1px solid #1e1e1e;
                 border-radius: 10px;
-                padding: 10px;
-                box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-                margin-bottom: 5px;
-            }
-            /* Ajuste para que el mapa folium no tenga bordes blancos */
-            .folium-map {
-                border-radius: 8px !important;
+                margin-top: 8px;
             }
         </style>
     """, unsafe_allow_html=True)
 
-    # 1. Crear el mapa base (Configuración igual)
-    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
-    Fullscreen(position="topright", title="Ver", title_cancel="Salir", force_separate_button=True).add_to(m)
+    # 1. Crear el mapa base
+    m = folium.Map(
+        location=[lat_centro, lon_centro], 
+        zoom_start=zoom_inicial, 
+        tiles="CartoDB dark_matter",
+        zoom_control=True
+    )
+    
+    Fullscreen(
+        position="topright", 
+        title="Ver pantalla completa", 
+        title_cancel="Salir", 
+        force_separate_button=True
+    ).add_to(m)
     
     # 2. Grupos de capas
     fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos (QGIS)", show=True)
@@ -357,16 +380,15 @@ with col_map:
             folium.GeoJson(
                 geojson_obj, 
                 style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1}, 
-                highlight_function=lambda x: {'fillColor': '#ffff00', 'color': '#ffff00', 'weight': 3, 'fillOpacity': 0.4}, 
+                highlight_function=lambda x: {'fillColor': '#ffff00', 'color': '#ffff00', 'weight': 2.5, 'fillOpacity': 0.3}, 
                 tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
             ).add_to(fg_sectores)
 
-    # 4. Medidores y Tooltip
+    # 4. Medidores y Tooltip (Usando tu diseño original de tooltip)
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Tu tooltip_html original completo
             tooltip_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -390,10 +412,10 @@ with col_map:
             
             folium.CircleMarker(
                 location=[r['Latitud'], r['Longitud']], 
-                radius=4, # Un poco más grande para visibilidad
+                radius=4, 
                 color=color_hex, 
                 fill=True, 
-                fill_opacity=1.0, 
+                fill_opacity=0.9, 
                 tooltip=folium.Tooltip(tooltip_html, sticky=True)
             ).add_to(fg_medidores)
 
@@ -402,22 +424,20 @@ with col_map:
     fg_medidores.add_to(m)
     folium.LayerControl(position='topright', collapsed=False).add_to(m)
 
-    # 6. RENDERIZADO CON EL MARCO TIPO "PANEL"
-    st.markdown('<div class="map-container-fixed">', unsafe_allow_html=True)
-    folium_static(m, width=880, height=550)
+    # 6. RENDERIZADO EN PANEL TÉCNICO
+    st.markdown('<div class="map-container-tecnico">', unsafe_allow_html=True)
+    folium_static(m, width=890, height=550) # Ajustado para llenar el panel
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # La leyenda ya la tienes abajo, no es necesario repetirla aquí si ya te gusta cómo se ve.
-
-    # Leyenda (ya tiene su propio estilo en el CSS superior)
-    st.markdown("""
-        <div class="map-legend">
-            <div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>CONSUMO REGULAR</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #32CD32;"></div>CONSUMO NORMAL</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FF8C00;"></div>CONSUMO BAJO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FFFFFF; border: 1px solid #555;"></div>CONSUMO CERO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FF0000;"></div>CONSUMO MUY ALTO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>CONSUMO ALTO</div>
+    # 7. LEYENDA INTEGRADA (Con el mismo estilo de borde que el mapa)
+    st.markdown(f"""
+        <div class="map-legend-integrated">
+            <div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>REGULAR</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #32CD32;"></div>NORMAL</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #FF8C00;"></div>BAJO</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #FFFFFF; border: 1px solid #555;"></div>CERO</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #FF0000;"></div>MUY ALTO</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>ALTO</div>
         </div>
     """, unsafe_allow_html=True)
     
