@@ -210,12 +210,11 @@ with st.sidebar:
         except:
             st.stop()
     
-    # --- SECCIÓN 2: FILTROS TÉCNICOS ---
+# --- SECCIÓN 2: FILTROS TÉCNICOS ---------------------------------------------------------------------------------------------------------------------------------------------
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
         
         with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=False):
-            # Diccionario para nombres amigables solicitados
             mapeo_nombres = {
                 "ClienteID_API": "Cliente",
                 "Metodoid_API": "Metodo",
@@ -229,18 +228,30 @@ with st.sidebar:
             filtros_activos = {}
             for col_real, nombre_amigable in mapeo_nombres.items():
                 if col_real in df_hes.columns:
-                    opciones = sorted(df_hes[col_real].unique().astype(str).tolist())
+                    # 1. Limpieza de opciones: eliminamos ceros, valores vacíos y nulos
+                    opciones_raw = df_hes[col_real].unique()
+                    
+                    # Filtramos: que no sea 0, ni '0', ni nulo, ni string vacío
+                    opciones = [
+                        str(int(float(x))) if str(x).replace('.0', '').isdigit() else str(x) 
+                        for x in opciones_raw 
+                        if pd.notnull(x) and str(x).strip() not in ['0', '0.0', '']
+                    ]
+                    opciones = sorted(list(set(opciones)))
                     
                     # Layout: Título a la izquierda, Selector a la derecha
                     col_tit, col_sel = st.columns([1, 2])
                     with col_tit:
-                        st.markdown(f"<p style='margin-top:8px; font-weight:bold; font-size:13px;'>{nombre_amigable}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='margin-top:8px; font-weight:bold; font-size:14px;'>{nombre_amigable}</p>", unsafe_allow_html=True)
                     with col_sel:
                         seleccion = st.multiselect("", options=opciones, key=f"f_{col_real}", label_visibility="collapsed")
                     
                     filtros_activos[col_real] = seleccion
+                    
+                    # Aplicar el filtro al DataFrame (considerando que el DF original puede tener los ceros)
                     if seleccion:
-                        df_hes = df_hes[df_hes[col_real].astype(str).isin(seleccion)]
+                        # Convertimos la columna a string para comparar correctamente con la selección limpia
+                        df_hes = df_hes[df_hes[col_real].astype(str).str.replace('.0', '', regex=False).isin(seleccion)]
 
 # --- SECCIÓN 3: RANKING (DISEÑO FIEL A LA IMAGEN) ---
         with st.expander("🏆 RANKING TOP 10", expanded=True):
