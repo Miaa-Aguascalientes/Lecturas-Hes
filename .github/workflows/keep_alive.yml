@@ -21,15 +21,25 @@ jobs:
 
       - name: Install Playwright
         run: |
-          npm install -g playwright
-          # Instalamos específicamente chromium que es el más compatible
+          npm install playwright
           npx playwright install chromium --with-deps
 
-      - name: Navegar a la App (Simulación Real)
+      - name: Navegar a la App (Modo Invisible)
         run: |
-          # Usamos 'cr' (Chromium) en lugar de 'wk' y añadimos un timeout
-          npx playwright cr https://lecturas-hes.streamlit.app/
+          node -e "
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage();
+            console.log('Abriendo la aplicación...');
+            await page.goto('https://lecturas-hes.streamlit.app/', { waitUntil: 'networkidle' });
+            console.log('Página cargada y WebSockets activos.');
+            await new Promise(r => setTimeout(r, 5000)); // Esperamos 5 seg para asegurar el ping
+            await browser.close();
+            console.log('Proceso terminado con éxito.');
+          })();
+          "
           
       - name: Confirmación de Actividad
         if: success()
-        run: echo "✅ La aplicación Lecturas HES ha sido despertada correctamente."
+        run: echo "✅ La aplicación Lecturas HES ha sido despertada en modo headless."
