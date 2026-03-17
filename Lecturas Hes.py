@@ -180,56 +180,75 @@ fin_año_pasado = inicio_año_actual - pd.Timedelta(days=1)
 
 with st.sidebar:
     st.image(URL_LOGO_MIAA, use_container_width=True)
-    st.divider()
+    
     if st.button("♻️ Actualizar Datos", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
+    
     st.divider()
 
-    st.write("**📅 Selecciona un rango**")
-    opcion_rango = st.selectbox("Rango predefinido", ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"], index=0, label_visibility="collapsed")
+    # --- SECCIÓN 1: FECHAS ---
+    with st.expander("📅 RANGO DE FECHAS", expanded=True):
+        opcion_rango = st.selectbox(
+            "Rango predefinido", 
+            ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"], 
+            index=0
+        )
 
-    if opcion_rango == "Este mes": default_range = (inicio_mes_actual, ahora)
-    elif opcion_rango == "Última semana": default_range = (ahora - pd.Timedelta(days=7), ahora)
-    elif opcion_rango == "Mes pasado": default_range = (inicio_mes_pasado, ultimo_dia_mes_pasado)
-    elif opcion_rango == "Últimos 6 meses": default_range = (ahora - pd.DateOffset(months=6), ahora)
-    elif opcion_rango == "Este año": default_range = (inicio_año_actual, ahora)
-    elif opcion_rango == "Año pasado": default_range = (inicio_año_pasado, fin_año_pasado)
-    else: default_range = (inicio_mes_actual, ahora)
+        if opcion_rango == "Este mes": default_range = (inicio_mes_actual, ahora)
+        elif opcion_rango == "Última semana": default_range = (ahora - pd.Timedelta(days=7), ahora)
+        elif opcion_rango == "Mes pasado": default_range = (inicio_mes_pasado, ultimo_dia_mes_pasado)
+        elif opcion_rango == "Últimos 6 meses": default_range = (ahora - pd.DateOffset(months=6), ahora)
+        elif opcion_rango == "Este año": default_range = (inicio_año_actual, ahora)
+        elif opcion_rango == "Año pasado": default_range = (inicio_año_pasado, fin_año_pasado)
+        else: default_range = (inicio_mes_actual, ahora)
 
-    try:
-        fecha_rango = st.date_input("Periodo de consulta", value=default_range, max_value=ahora, format="DD/MM/YYYY", label_visibility="collapsed")
-    except:
-        st.stop()
+        try:
+            fecha_rango = st.date_input("Periodo", value=default_range, max_value=ahora, format="DD/MM/YYYY")
+        except:
+            st.stop()
     
+    # --- SECCIÓN 2: FILTROS TÉCNICOS ---
     if len(fecha_rango) == 2:
+        # Carga inicial de datos para los filtros
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
-        st.markdown("<br>", unsafe_allow_html=True)
-        filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
-        filtros_activos = {}
         
-        for col in filtros_sidebar:
-            if col in df_hes.columns:
-                opciones = sorted(df_hes[col].unique().astype(str).tolist())
-                c1, c2 = st.columns([1, 2])
-                with c1: st.markdown(f"<p style='margin-top:10px; font-size: 14px;'>{col}</p>", unsafe_allow_html=True)
-                with c2: seleccion = st.multiselect("", options=opciones, key=f"f_{col}", label_visibility="collapsed")
-                filtros_activos[col] = seleccion
-                if seleccion: df_hes = df_hes[df_hes[col].astype(str).isin(seleccion)]
+        with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=False):
+            filtros_sidebar = ["ClienteID_API", "Metodoid_API", "Medidor", "Predio", "Colonia", "Giro", "Sector"]
+            filtros_activos = {}
+            
+            for col in filtros_sidebar:
+                if col in df_hes.columns:
+                    opciones = sorted(df_hes[col].unique().astype(str).tolist())
+                    seleccion = st.multiselect(f"Filtrar por {col}", options=opciones, key=f"f_{col}")
+                    filtros_activos[col] = seleccion
+                    if seleccion:
+                        df_hes = df_hes[df_hes[col].astype(str).isin(seleccion)]
 
-        st.divider()
-        st.write("**Ranking Top 10 Consumo**")
-        if not df_hes.empty:
-            ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
-            max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
-            for _, row in ranking_data.iterrows():
-                rc1, rc2 = st.columns([1, 1])
-                rc1.markdown(f"<span style='color: #81D4FA; font-size: 12px;'>{row['Medidor']}</span>", unsafe_allow_html=True)
-                pct = (row['Consumo_diario'] / max_c) * 100
-                rc2.markdown(f'<div style="display: flex; align-items: center; justify-content: flex-end;"><span style="font-size: 11px; margin-right: 5px;">{row["Consumo_diario"]:,.0f}</span><div style="width: 40px; background-color: #333; height: 8px; border-radius: 2px;"><div style="width: {pct}%; background-color: #FF0000; height: 8px; border-radius: 2px;"></div></div></div>', unsafe_allow_html=True)
-        st.markdown('<div style="background-color: #444; padding: 10px; border-radius: 5px; text-align: center; margin: 15px 0;">⚠️ <b>Informe alarmas</b></div>', unsafe_allow_html=True)
+        # --- SECCIÓN 3: RANKING ---
+        with st.expander("🏆 RANKING TOP 10", expanded=True):
+            if not df_hes.empty:
+                ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
+                max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
+                
+                for _, row in ranking_data.iterrows():
+                    rc1, rc2 = st.columns([1.2, 1])
+                    rc1.markdown(f"<p style='font-size: 11px; margin-bottom: 0px;'>{row['Medidor']}</p>", unsafe_allow_html=True)
+                    pct = (row['Consumo_diario'] / max_c) * 100
+                    rc2.markdown(
+                        f'''<div style="display: flex; align-items: center; justify-content: flex-end;">
+                            <span style="font-size: 10px; margin-right: 5px;">{row["Consumo_diario"]:,.0f}</span>
+                            <div style="width: 35px; background-color: #333; height: 6px; border-radius: 2px;">
+                                <div style="width: {pct}%; background-color: #FF0000; height: 6px; border-radius: 2px;"></div>
+                            </div>
+                        </div>''', unsafe_allow_html=True)
+            else:
+                st.write("Sin datos")
+
+        st.markdown('<div style="background-color: #B22222; padding: 8px; border-radius: 5px; text-align: center; margin-top: 10px; font-size: 12px;">⚠️ <b>INFORME ALARMAS</b></div>', unsafe_allow_html=True)
     else:
+        st.info("Selecciona un rango de fechas.")
         st.stop()
 
 # PROCESAMIENTO
