@@ -2,14 +2,13 @@ name: Despertar Real Lecturas HES
 
 on:
   schedule:
-    # Se ejecuta cada 20 minutos para mayor seguridad
     - cron: '*/20 * * * *'
-  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions
+  workflow_dispatch:
 
 jobs:
   wake-up:
     runs-on: ubuntu-latest
-    timeout-minutes: 5 # Evita que el job consuma minutos de más si se queda colgado
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
@@ -20,14 +19,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright
         run: |
           npm install -g playwright
+          # Instalamos específicamente chromium que es el más compatible
           npx playwright install chromium --with-deps
 
       - name: Navegar a la App (Simulación Real)
         run: |
-          npx playwright wk https://lecturas-hes.streamlit.app/
+          # Usamos 'cr' (Chromium) en lugar de 'wk' y añadimos un timeout
+          npx playwright cr https://lecturas-hes.streamlit.app/
           
       - name: Confirmación de Actividad
-        run: echo "La aplicación Lecturas HES ha sido visitada con un navegador real."
+        if: success()
+        run: echo "✅ La aplicación Lecturas HES ha sido despertada correctamente."
