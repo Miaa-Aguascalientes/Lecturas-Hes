@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"  
 )
 
-# ESTILO CSS
+# ESTILO CSS COMPLETO
 st.markdown("""
     <style>
         .titulo-superior {
@@ -37,22 +37,22 @@ st.markdown("""
             padding-top: 0rem !important;
         }
         [data-testid="stSidebarUserContent"] img {
-            margin-top: -70px !important; 
+            margin-top: -60px !important; 
             max-width: 200px !important;
             margin-left: auto;
             margin-right: auto;
             display: block;
         }
-        [data-testid="stSidebarUserContent"] img {
-            margin-top: -60px !important;
-        }
         .block-container {
             padding-top: 1.8rem !important;
             padding-bottom: 0rem !important;
         }
-        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stMetric"]) {
-            width: 60% !important;
-            gap: 0px !important;
+        .marco-tablero {
+            background-color: #111111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
         [data-testid="stMetric"] {
             display: flex;
@@ -66,33 +66,15 @@ st.markdown("""
             font-weight: bold;
             justify-content: center !important;
         }
-        [data-testid="stMetricLabel"] {
-            justify-content: center !important;
-        }
         .stApp { background-color: #000000 !important; color: white; }
         section[data-testid="stSidebar"] { background-color: #111111 !important; }
-        [data-testid="stSidebarUserContent"] div[data-testid="stVerticalBlock"] > div {
-            padding-bottom: 0px !important;
-            padding-top: 0px !important;
-            margin-bottom: -5px !important;
-        }
-        [data-testid="stWidgetLabel"] p {
-            font-size: 14px !important;
-            margin-bottom: 0px !important;
-        }
-        .stMultiSelect {
-            margin-bottom: 0px !important;
-        }
         .map-legend {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
             gap: 20px;
             padding: 15px;
-            background-color: #111111;
-            border-radius: 8px;
             margin-top: 10px;
-            border: 1px solid #333;
         }
         .legend-item {
             display: flex;
@@ -122,7 +104,7 @@ def get_mysql_engine():
         conn_str = f"mysql+mysqlconnector://{user}:{pwd}@{host}/{db}"
         return create_engine(conn_str)
     except Exception as e:
-        st.error(f"Error configurando motor MySQL: {e}")
+        st.error(f"Error motor MySQL: {e}")
         return None
 
 @st.cache_resource
@@ -130,32 +112,25 @@ def get_postgres_conn():
     try:
         return psycopg2.connect(**st.secrets["postgres"])
     except Exception as e:
-        st.error(f"Error conectando a Postgres: {e}")
+        st.error(f"Error Postgres: {e}")
         return None
 
 @st.cache_data(ttl=3600)
 def get_sectores_cached():
     conn = get_postgres_conn()
-    if conn is None:
-        return pd.DataFrame()
+    if conn is None: return pd.DataFrame()
     try:
         query = 'SELECT sector, ST_AsGeoJSON(ST_Transform(geom, 4326)) AS geojson_data FROM "Sectorizacion"."Sectores_hidr"'
         df = pd.read_sql(query, conn)
         conn.close()
         return df
     except Exception as e:
-        st.sidebar.error(f"Error en consulta Postgres: {e}")
+        st.sidebar.error(f"Error consulta Postgres: {e}")
         return pd.DataFrame()
-
-def reiniciar_tablero():
-    st.cache_data.clear()
-    st.cache_resource.clear()
-    time.sleep(1) 
-    st.rerun()
 
 def get_color_logic(nivel, consumo_mes):
     v = float(consumo_mes) if consumo_mes else 0
-    colors = {"REGULAR": "#00FF00", "NORMAL": "#32CD32", "BAJO": "#FF8C00", "CERO": "#FFFFFF", "MUY ALTO": "#FF0000", "ALTO": "#B22222", "null": "#0000FF"}
+    colors = {"REGULAR": "#00FF00", "NORMAL": "#32CD32", "BAJO": "#FF8C00", "CERO": "#FFFFFF", "MUY ALTO": "#FF0000", "ALTO": "#B22222"}
     config = {'DOMESTICO A': [5, 10, 15, 30], 'DOMESTICO B': [6, 11, 20, 30], 'DOMESTICO C': [8, 19, 37, 50]}
     n = str(nivel).upper()
     lim = config.get(n, [5, 10, 15, 30])
@@ -178,177 +153,94 @@ inicio_año_actual = ahora.replace(month=1, day=1)
 inicio_año_pasado = inicio_año_actual - pd.DateOffset(years=1)
 fin_año_pasado = inicio_año_actual - pd.Timedelta(days=1)
 
+# --- SIDEBAR ---
 with st.sidebar:
     st.image(URL_LOGO_MIAA, use_container_width=True)
-    
     if st.button("♻️ Actualizar Datos", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
-    
     st.divider()
 
-    # --- SECCIÓN 1: FECHAS ---
     with st.expander("📅 RANGO DE FECHAS", expanded=True):
-        opcion_rango = st.selectbox(
-            "Rango predefinido", 
-            ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"], 
-            index=0
-        )
-        
-        # Lógica de fechas simplificada
-        if opcion_rango == "Este mes": default_range = (inicio_mes_actual, ahora)
-        elif opcion_rango == "Última semana": default_range = (ahora - pd.Timedelta(days=7), ahora)
-        elif opcion_rango == "Mes pasado": default_range = (inicio_mes_pasado, ultimo_dia_mes_pasado)
-        elif opcion_rango == "Últimos 6 meses": default_range = (ahora - pd.DateOffset(months=6), ahora)
-        elif opcion_rango == "Este año": default_range = (inicio_año_actual, ahora)
-        elif opcion_rango == "Año pasado": default_range = (inicio_año_pasado, fin_año_pasado)
-        else: default_range = (inicio_mes_actual, ahora)
-
+        opcion_rango = st.selectbox("Rango", ["Este mes", "Última semana", "Mes pasado", "Últimos 6 meses", "Este año", "Año pasado", "Personalizado"], index=0)
+        if opcion_rango == "Este mes": dr = (inicio_mes_actual, ahora)
+        elif opcion_rango == "Última semana": dr = (ahora - pd.Timedelta(days=7), ahora)
+        elif opcion_rango == "Mes pasado": dr = (inicio_mes_pasado, ultimo_dia_mes_pasado)
+        elif opcion_rango == "Últimos 6 meses": dr = (ahora - pd.DateOffset(months=6), ahora)
+        elif opcion_rango == "Este año": dr = (inicio_año_actual, ahora)
+        elif opcion_rango == "Año pasado": dr = (inicio_año_pasado, fin_año_pasado)
+        else: dr = (inicio_mes_actual, ahora)
         try:
-            fecha_rango = st.date_input("Periodo", value=default_range, max_value=ahora, format="DD/MM/YYYY", label_visibility="collapsed")
-        except:
-            st.stop()
-    
-# --- SECCIÓN 2: FILTROS TÉCNICOS ---------------------------------------------------------------------------------------------------------------------------------------------
+            fecha_rango = st.date_input("Periodo", value=dr, max_value=ahora, format="DD/MM/YYYY", label_visibility="collapsed")
+        except: st.stop()
+
     if len(fecha_rango) == 2:
         df_hes = pd.read_sql(f"SELECT * FROM HES WHERE Fecha BETWEEN '{fecha_rango[0]}' AND '{fecha_rango[1]}'", mysql_engine)
-        
         with st.expander("🔍 FILTROS DE BÚSQUEDA", expanded=False):
-            mapeo_nombres = {
-                "ClienteID_API": "Cliente",
-                "Metodoid_API": "Metodo",
-                "Medidor": "Medidor",
-                "Predio": "Predio",
-                "Colonia": "Colonia",
-                "Giro": "Giro",
-                "Sector": "Sector"
-            }
-            
+            mapeo = {"ClienteID_API": "Cliente", "Metodoid_API": "Metodo", "Medidor": "Medidor", "Predio": "Predio", "Colonia": "Colonia", "Giro": "Giro", "Sector": "Sector"}
             filtros_activos = {}
-            for col_real, nombre_amigable in mapeo_nombres.items():
+            for col_real, nombre in mapeo.items():
                 if col_real in df_hes.columns:
-                    # 1. Limpieza de opciones: eliminamos ceros, valores vacíos y nulos
-                    opciones_raw = df_hes[col_real].unique()
-                    
-                    # Filtramos: que no sea 0, ni '0', ni nulo, ni string vacío
-                    opciones = [
-                        str(int(float(x))) if str(x).replace('.0', '').isdigit() else str(x) 
-                        for x in opciones_raw 
-                        if pd.notnull(x) and str(x).strip() not in ['0', '0.0', '']
-                    ]
-                    opciones = sorted(list(set(opciones)))
-                    
-                    # Layout: Título a la izquierda, Selector a la derecha
-                    col_tit, col_sel = st.columns([1, 2])
-                    with col_tit:
-                        st.markdown(f"<p style='margin-top:8px; font-weight:bold; font-size:14px;'>{nombre_amigable}</p>", unsafe_allow_html=True)
-                    with col_sel:
-                        seleccion = st.multiselect("", options=opciones, key=f"f_{col_real}", label_visibility="collapsed")
-                    
+                    raw = df_hes[col_real].unique()
+                    opciones = sorted([str(int(float(x))) if str(x).replace('.0', '').isdigit() else str(x) for x in raw if pd.notnull(x) and str(x).strip() not in ['0', '0.0', '']])
+                    c_tit, c_sel = st.columns([1, 2])
+                    with c_tit: st.markdown(f"<p style='margin-top:8px; font-weight:bold; font-size:14px;'>{nombre}</p>", unsafe_allow_html=True)
+                    with c_sel: seleccion = st.multiselect("", options=opciones, key=f"f_{col_real}", label_visibility="collapsed")
                     filtros_activos[col_real] = seleccion
-                    
-                    # Aplicar el filtro al DataFrame (considerando que el DF original puede tener los ceros)
-                    if seleccion:
-                        # Convertimos la columna a string para comparar correctamente con la selección limpia
-                        df_hes = df_hes[df_hes[col_real].astype(str).str.replace('.0', '', regex=False).isin(seleccion)]
+                    if seleccion: df_hes = df_hes[df_hes[col_real].astype(str).str.replace('.0', '', regex=False).isin(seleccion)]
 
-# --- SECCIÓN 3: RANKING (DISEÑO FIEL A LA IMAGEN) ---
         with st.expander("🏆 RANKING TOP 10", expanded=True):
             if not df_hes.empty:
-                ranking_data = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
-                max_c = ranking_data['Consumo_diario'].max() if not ranking_data.empty else 1
-                
+                rk = df_hes.groupby('Medidor')['Consumo_diario'].sum().sort_values(ascending=False).head(10).reset_index()
+                max_c = rk['Consumo_diario'].max() or 1
                 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
-                
-                for _, row in ranking_data.iterrows():
-                    # --- LIMPIEZA DEL NÚMERO DE MEDIDOR ---
-                    # Convertimos a float y luego a int para eliminar el ".0" si existe
-                    try:
-                        medidor_limpio = str(int(float(row['Medidor'])))
-                    except:
-                        medidor_limpio = str(row['Medidor']) # Por si el ID tiene letras
-
+                for _, row in rk.iterrows():
+                    try: m_limpio = str(int(float(row['Medidor'])))
+                    except: m_limpio = str(row['Medidor'])
                     rc1, rc2, rc3 = st.columns([1.2, 0.7, 1.1])
-                    
-                    # 1. ID del Medidor Limpio (Azul, Negrita, 16px)
-                    rc1.markdown(f"<p style='font-size: 16px; font-weight: 800; color: #81D4FA; margin-bottom: 12px;'>{medidor_limpio}</p>", unsafe_allow_html=True)
-                    
-                    # 2. Valor Numérico
+                    rc1.markdown(f"<p style='font-size: 16px; font-weight: 800; color: #81D4FA; margin-bottom: 12px;'>{m_limpio}</p>", unsafe_allow_html=True)
                     rc2.markdown(f"<p style='font-size: 16px; font-weight: 800; color: white; text-align: right; margin-bottom: 12px;'>{row['Consumo_diario']:,.0f}</p>", unsafe_allow_html=True)
-                    
-                    # 3. Barra de progreso
                     pct = (row['Consumo_diario'] / max_c) * 100
-                    rc3.markdown(
-                        f'''<div style="display: flex; align-items: center; height: 24px; margin-bottom: 12px;">
-                            <div style="width: 100%; background-color: #262626; height: 16px; border-radius: 4px; overflow: hidden;">
-                                <div style="width: {pct}%; background-color: #FF0000; height: 16px; border-radius: 4px;"></div>
-                            </div>
-                        </div>''', unsafe_allow_html=True)
-                
+                    rc3.markdown(f'''<div style="display: flex; align-items: center; height: 24px; margin-bottom: 12px;"><div style="width: 100%; background-color: #262626; height: 16px; border-radius: 4px; overflow: hidden;"><div style="width: {pct}%; background-color: #FF0000; height: 16px; border-radius: 4px;"></div></div></div>''', unsafe_allow_html=True)
                 st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-            else:
-                st.write("Sin datos")
-
-        # Botón de alarmas con margen superior para no pegarse al ranking
-        st.markdown('<div style="background-color: #B22222; padding: 10px; border-radius: 5px; text-align: center; margin-top: 20px; font-weight: bold; letter-spacing: 1px;">⚠️ INFORME ALARMAS</div>', unsafe_allow_html=True)
-    else:
-        st.stop()
+            else: st.write("Sin datos")
+        st.markdown('<div style="background-color: #B22222; padding: 10px; border-radius: 5px; text-align: center; margin-top: 20px; font-weight: bold;">⚠️ INFORME ALARMAS</div>', unsafe_allow_html=True)
+    else: st.stop()
 
 # PROCESAMIENTO
-mapeo_columnas = {'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first', 'Nivel': 'first', 'ClienteID_API': 'first', 'Nombre': 'first', 'Predio': 'first', 'Domicilio': 'first', 'Colonia': 'first', 'Giro': 'first', 'Sector': 'first', 'Metodoid_API': 'first', 'Primer_instalacion': 'first', 'Fecha': 'last'}
-agg_segura = {col: func for col, func in mapeo_columnas.items() if col in df_hes.columns}
-df_mapa = df_hes.groupby('Medidor').agg(agg_segura).reset_index()
-df_valid_coords = df_mapa[(df_mapa['Latitud'] != 0) & (df_mapa['Longitud'] != 0) & (df_mapa['Latitud'].notnull())]
+agg = {c: f for c, f in {'Consumo_diario': 'sum', 'Lectura': 'last', 'Latitud': 'first', 'Longitud': 'first', 'Nivel': 'first', 'ClienteID_API': 'first', 'Nombre': 'first', 'Predio': 'first', 'Domicilio': 'first', 'Colonia': 'first', 'Giro': 'first', 'Sector': 'first', 'Metodoid_API': 'first', 'Primer_instalacion': 'first', 'Fecha': 'last'}.items() if c in df_hes.columns}
+df_mapa = df_hes.groupby('Medidor').agg(agg).reset_index()
+df_coords = df_mapa[(df_mapa['Latitud'] != 0) & (df_mapa['Longitud'] != 0) & (df_mapa['Latitud'].notnull())]
+lat_c, lon_c, zoom = (df_coords['Latitud'].mean(), df_coords['Longitud'].mean(), 14) if not df_coords.empty and (filtros_activos.get("Colonia") or filtros_activos.get("Sector")) else (21.8853, -102.2916, 12)
 
-if not df_valid_coords.empty and (filtros_activos.get("Colonia") or filtros_activos.get("Sector")):
-    lat_centro, lon_centro, zoom_inicial = df_valid_coords['Latitud'].mean(), df_valid_coords['Longitud'].mean(), 14
-else:
-    lat_centro, lon_centro, zoom_inicial = 21.8853, -102.2916, 12
-
-# DASHBOARD
+# --- DASHBOARD PRINCIPAL ---
 st.markdown('<div class="titulo-superior">Medidores inteligentes - Tablero de consumos</div>', unsafe_allow_html=True)
 
-# Indicadores
+st.markdown('<div class="marco-tablero">', unsafe_allow_html=True)
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("📟 N° de medidores", f"{len(df_mapa):,}")
-consumo_total = df_hes['Consumo_diario'].sum() if 'Consumo_diario' in df_hes.columns else 0
-m2.metric("💧 Consumo total", f"{consumo_total:,.1f} m³")
-promedio = df_hes['Consumo_diario'].mean() if 'Consumo_diario' in df_hes.columns else 0
-m3.metric("📈 Promedio diario", f"{promedio:.2f} m³")
+m2.metric("💧 Consumo total", f"{df_hes['Consumo_diario'].sum():,.1f} m³")
+m3.metric("📈 Promedio diario", f"{df_hes['Consumo_diario'].mean():.2f} m³")
 m4.metric("📋 Total lecturas", f"{len(df_hes):,}")
 
+st.markdown("<br>", unsafe_allow_html=True)
 col_map, col_der = st.columns([3, 1.2])
 
-# --- SECCIÓN DEL MAPA ACTUALIZADA ---
-
 with col_map:
-    # 1. Crear el mapa base con el estilo oscuro solicitado anteriormente
-    m = folium.Map(location=[lat_centro, lon_centro], zoom_start=zoom_inicial, tiles="CartoDB dark_matter")
-    Fullscreen(position="topright", title="Ver en pantalla completa", title_cancel="Salir de pantalla completa", force_separate_button=True).add_to(m)
+    m = folium.Map(location=[lat_c, lon_c], zoom_start=zoom, tiles="CartoDB dark_matter")
+    Fullscreen(position="topright", force_separate_button=True).add_to(m)
+    fg_s, fg_m = folium.FeatureGroup(name="Sectores"), folium.FeatureGroup(name="Medidores")
     
-    # 2. Definir los grupos de capas (esto permite el encendido/apagado)
-    fg_sectores = folium.FeatureGroup(name="Sectores Hidráulicos (QGIS)", show=True)
-    fg_medidores = folium.FeatureGroup(name="Medidores Inteligentes", show=True)
-
-    # 3. Procesar y añadir Sectores al grupo fg_sectores
     if not df_sec.empty:
-        for _, row in df_sec.iterrows():
-            geojson_obj = json.loads(row['geojson_data'])
-            folium.GeoJson(
-                geojson_obj, 
-                style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1}, 
-                highlight_function=lambda x: {'fillColor': '#ffff00', 'color': '#ffff00', 'weight': 3, 'fillOpacity': 0.4}, 
-                tooltip=folium.Tooltip(f"Sector: {row['sector']}", sticky=True)
-            ).add_to(fg_sectores)
+        for _, r in df_sec.iterrows():
+            folium.GeoJson(json.loads(r['geojson_data']), style_function=lambda x: {'fillColor': '#00d4ff', 'color': '#00d4ff', 'weight': 1, 'fillOpacity': 0.1}).add_to(fg_s)
 
-    # 4. Procesar y añadir Medidores al grupo fg_medidores
     for _, r in df_mapa.iterrows():
         if pd.notnull(r['Latitud']) and pd.notnull(r['Longitud']):
-            # Obtener lógica de color y etiqueta
             color_hex, etiqueta = get_color_logic(r.get('Nivel'), r.get('Consumo_diario', 0))
             
-            # Tu tooltip_html original completo
+            # --- TU TOOLTIP HTML ORIGINAL RESTAURADO ---
             tooltip_html = f"""
             <div style='font-family: Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; padding: 10px; white-space: nowrap; display: inline-block;'>
                 <h5 style='margin:0 0 8px 0; color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 3px;'>Detalle del Medidor</h5>
@@ -369,76 +261,30 @@ with col_map:
                 </div>
             </div>
             """
-            
-            # Añadir el marcador al grupo fg_medidores en lugar de directamente al mapa
-            folium.CircleMarker(
-                location=[r['Latitud'], r['Longitud']], 
-                radius=3, 
-                color=color_hex, 
-                fill=True, 
-                fill_opacity=0.9, 
-                tooltip=folium.Tooltip(tooltip_html, sticky=True)
-            ).add_to(fg_medidores)
+            folium.CircleMarker([r['Latitud'], r['Longitud']], radius=3, color=color_hex, fill=True, fill_opacity=0.9, tooltip=folium.Tooltip(tooltip_html, sticky=True)).add_to(fg_m)
 
-    # 5. Agregar los grupos al mapa y el control de capas
-    fg_sectores.add_to(m)
-    fg_medidores.add_to(m)
-    
-    # LayerControl añade el menú desplegable en la esquina superior derecha
-    folium.LayerControl(position='topright', collapsed=False).add_to(m)
-
-    # Renderizar en Streamlit
+    fg_s.add_to(m); fg_m.add_to(m)
+    folium.LayerControl(collapsed=False).add_to(m)
     folium_static(m, width=900, height=550)
 
-    st.markdown("""
-        <div class="map-legend">
-            <div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>CONSUMO REGULAR</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #32CD32;"></div>CONSUMO NORMAL</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FF8C00;"></div>CONSUMO BAJO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FFFFFF; border: 1px solid #555;"></div>CONSUMO CERO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #FF0000;"></div>CONSUMO MUY ALTO</div>
-            <div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>CONSUMO ALTO</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="map-legend"><div class="legend-item"><div class="legend-color" style="background-color: #00FF00;"></div>REGULAR</div><div class="legend-item"><div class="legend-color" style="background-color: #32CD32;"></div>NORMAL</div><div class="legend-item"><div class="legend-color" style="background-color: #FF8C00;"></div>BAJO</div><div class="legend-item"><div class="legend-color" style="background-color: #FFFFFF; border: 1px solid #555;"></div>CERO</div><div class="legend-item"><div class="legend-color" style="background-color: #FF0000;"></div>MUY ALTO</div><div class="legend-item"><div class="legend-color" style="background-color: #B22222;"></div>ALTO</div></div>""", unsafe_allow_html=True)
 
 with col_der:
     st.write("🟢 **Histórico Reciente**")
-    if not df_hes.empty:
-        st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
-    else:
-        st.info("No hay lecturas para el periodo seleccionado.")
+    st.dataframe(df_hes[['Fecha', 'Lectura', 'Consumo_diario']].tail(15).sort_values(by='Fecha', ascending=False), hide_index=True, use_container_width=True)
 
-# --- INTEGRACIÓN DE GRÁFICOS APILADOS ---
+st.markdown('</div>', unsafe_allow_html=True)
+
+# GRÁFICOS
 st.divider()
-
 if not df_hes.empty:
-    # 1. Gráfico de Consumo Total por Día (Ancho Completo)
-    df_diario = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
-    fig_diario = px.bar(
-        df_diario, x='Fecha', y='Consumo_diario', text_auto=',.2f',
-        color_discrete_sequence=['#00d4ff']
-    )
-    fig_diario.update_layout(
-        title="Consumo Total por Día",
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        font_color="white", height=350, margin=dict(l=10, r=10, t=40, b=10)
-    )
-    fig_diario.update_traces(textposition='outside')
-    fig_diario.update_yaxes(tickformat=",") # Formato de miles en el eje Y
-    st.plotly_chart(fig_diario, use_container_width=True)
+    df_d = df_hes.groupby('Fecha')['Consumo_diario'].sum().reset_index()
+    fig1 = px.bar(df_d, x='Fecha', y='Consumo_diario', text_auto=',.2f', title="Consumo Total por Día", color_discrete_sequence=['#00d4ff'])
+    fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=350)
+    st.plotly_chart(fig1, use_container_width=True)
 
-    # 2. Gráfico de Consumo por Medidor (Ancho Completo - Todos los medidores)
-    df_todos_med = df_mapa.sort_values(by='Consumo_diario', ascending=False)
-    fig_med = px.bar(
-        df_todos_med, x='Medidor', y='Consumo_diario',
-        color_discrete_sequence=['#00d4ff']
-    )
-    fig_med.update_layout(
-        title="Consumo por Medidor (Registros Totales)",
-        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        font_color="white", height=350, margin=dict(l=10, r=10, t=40, b=10)
-    )
-    fig_med.update_yaxes(tickformat=",") # Formato de miles en el eje Y
-    fig_med.update_xaxes(tickangle=45, type='category') # Categoría para evitar que Plotly agrupe IDs numéricos
-    st.plotly_chart(fig_med, use_container_width=True)
-
+    df_t = df_mapa.sort_values(by='Consumo_diario', ascending=False)
+    fig2 = px.bar(df_t, x='Medidor', y='Consumo_diario', title="Consumo por Medidor", color_discrete_sequence=['#00d4ff'])
+    fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", height=350)
+    fig2.update_xaxes(type='category')
+    st.plotly_chart(fig2, use_container_width=True)
